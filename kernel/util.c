@@ -24,6 +24,8 @@ void run_command(char *cmd) {
         uart_puts("  showinfo               - Show board revision (value and information) and board MAC address in correct format\r\n");
         uart_puts("  baudrate               - Allow the user to change the baudrate of current UART being used\r\n");
         uart_puts("  handshake              - Allow the user to turn on/off CTS/RTS handsharking on current UART if possible\r\n");
+        uart_puts("  task2                  - Display text, image and video \r\n");
+        uart_puts("  task3                  - Run a small game \r\n");
     } 
     else if (cmd[0] == '\0') {
         // empty input → do nothing

@@ -2,6 +2,30 @@
 #include "../uart/uart1.h"
 #include "mbox.h"
 #include "framebf.h"
+#define WELCOME_MSG \
+" ####### ####### ####### #######  #####  #        #####    ###      \n" \
+" #       #       #          #    #     # #    #  #     #  #   #     \n" \
+" #       #       #          #          # #    #  #     # #     #    \n" \
+" #####   #####   #####      #     #####  #    #   ###### #     #    \n" \
+" #       #       #          #    #       #######       # #     #    \n" \
+" #       #       #          #    #            #  #     #  #   #     \n" \
+" ####### ####### #######    #    #######      #   #####    ###      \n" \
+"                                                                    \n" \
+" ######     #    ######  #######    #######  #####                  \n" \
+" #     #   # #   #     # #          #     # #     #                 \n" \
+" #     #  #   #  #     # #          #     # #                       \n" \
+" ######  #     # ######  #####      #     #  #####                  \n" \
+" #     # ####### #   #   #          #     #       #                 \n" \
+" #     # #     # #    #  #          #     # #     #                 \n" \
+" ######  #     # #     # #######    #######  #####                  \n" \
+"                                                                    \n" \
+"- Developed by Group 2\n" \
+"  Members:\n" \
+"    - s3993986  Hồng Thiệu Kiệt\n" \
+"    - s3978567  Lê Phương Ngân\n" \
+"    - s3990627  Nguyễn Hoàng Sơn\n" \
+"    - s3878104  Lee Dohwan \n" \
+"    - s3924763  Huynh Nhat Anh\n"
 
 void main()
 {
@@ -9,7 +33,7 @@ void main()
 	uart_init();
 
 	// say hello
-	uart_puts("\n\nHello World!\n");
+	uart_puts(WELCOME_MSG);
 
 	// Initialize frame buffer
 	framebf_init();

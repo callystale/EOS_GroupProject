@@ -131,3 +131,15 @@ void uart_dec(int num)
 
 	uart_puts(str);
 }
+
+/**
+ * Display a single byte (8 bits) in two-digit hex format
+ */
+void uart_hex_byte(unsigned char b) {
+    char hex[3];
+    const char *digits = "0123456789ABCDEF";
+    hex[0] = digits[(b >> 4) & 0xF];
+    hex[1] = digits[b & 0xF];
+    hex[2] = '\0';
+    uart_puts(hex);
+}

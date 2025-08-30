@@ -1,4 +1,5 @@
-#include "util.h"
+#include "commands.h"
+#include "mbox.h"
 #include "../uart/uart1.h"
 
 typedef struct {
@@ -92,6 +93,44 @@ void clear_screen() {
 }
 
 
+void get_board_info() {
+    // mailbox data buffer
+    mBuf[0] = 12*4;
+    mBuf[1] = MBOX_REQUEST;
+    
+    mBuf[2] = 0x00010002; // Get board revision
+    mBuf[3] = 4;
+    mBuf[4] = 0;
+    mBuf[5] = 0;
+
+    mBuf[6] = 0x00010003; // Get MAC address
+    mBuf[7] = 8;
+    mBuf[8] = 0;
+    mBuf[9] = 0;
+    mBuf[10] = 0;
+
+    mBuf[11] = MBOX_TAG_LAST;
+
+    // send request
+    if (mbox_call(ADDR(mBuf), MBOX_CH_PROP)) {
+        // print revision
+        uart_puts("Board Revision: 0x");
+        uart_hex(mBuf[5]);
+        uart_puts("\r\n");
+
+        // print MAC address
+        uart_puts("Board MAC Address: ");
+        unsigned char *mac = (unsigned char *)&mBuf[9];
+        for (int i = 0; i < 6; i++) {
+            uart_hex_byte(mac[i]);
+            if (i < 5) uart_puts(":");
+        }
+        uart_puts("\r\n");
+    } else {
+        uart_puts("Failed to get board info\r\n");
+    }
+}
+
 void run_command(char *input) {
     char cmd[32];
     char arg[32];
@@ -140,6 +179,9 @@ void run_command(char *input) {
     } 
     else if(strcmp(cmd, "clear") == 0){
         clear_screen();
+    }
+    else if(strcmp(cmd, "showinfo") == 0){
+        get_board_info();
     }
     else if (cmd[0] == '\0') {
         // empty input → do nothing

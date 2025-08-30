@@ -2,7 +2,7 @@
 #include "../uart/uart1.h"
 #include "mbox.h"
 #include "framebf.h"
-#include "util.h"
+#include "commands.h"
 
 #define WELCOME_MSG \
 " ####### ####### ####### #######  #####  #        #####    ###      \n" \
@@ -31,13 +31,12 @@
 
 
 void main()
-{
+{   
     // set up serial console
     uart_init();
 
     // say hello
     uart_puts(WELCOME_MSG);
-
     
 
     // Initialize frame buffer

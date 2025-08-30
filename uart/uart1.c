@@ -77,7 +77,7 @@ char uart_getc() {
 /**
  * Display a string
  */
-void uart_puts(char *s) {
+void uart_puts(const char *s) {
     while (*s) {
         // convert newline to carriage return + newline
         if (*s == '\n')

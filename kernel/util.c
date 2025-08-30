@@ -86,6 +86,12 @@ void split_command(char *input, char *cmd, char *arg) {
     arg[j] = '\0';
 }
 
+void clear_screen() {
+    uart_puts("\033[2J"); // Clear entire screen
+    uart_puts("\033[H");  // Move cursor to top-left
+}
+
+
 void run_command(char *input) {
     char cmd[32];
     char arg[32];
@@ -132,6 +138,9 @@ void run_command(char *input) {
             }
         }
     } 
+    else if(strcmp(cmd, "clear") == 0){
+        clear_screen();
+    }
     else if (cmd[0] == '\0') {
         // empty input → do nothing
     } 
@@ -141,3 +150,4 @@ void run_command(char *input) {
         uart_puts("\r\n");
     }
 }
+

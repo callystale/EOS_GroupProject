@@ -91,6 +91,46 @@ void split_command(char *input, char *cmd, char *arg) {
     arg[j] = '\0';
 }
 
+void brief_help(){
+    uart_puts("Available commands:\r\n");
+            for (int i = 0; i < command_count; i++) {
+                uart_puts("  ");
+                uart_puts(commands[i].name);
+                // pad spaces so usages align (let's assume max name length = 10)
+                int len = strlen(commands[i].name);
+                int pad = 12 - len; // adjust 12 based on desired column width
+                for (int j = 0; j < pad; j++) {
+                    uart_puts(" ");
+                }
+                uart_puts(" - ");
+                uart_puts(commands[i].usage);
+                uart_puts("\r\n");
+            }
+            uart_puts("\r\nType 'help <command>' for more details.\r\n");
+}
+
+void detailed_help(char *arg){
+    // show details for specific command
+    int found = 0;
+    for (int i = 0; i < command_count; i++) {
+        if (strcmp(arg, commands[i].name) == 0) {
+            uart_puts("Command: ");
+            uart_puts(commands[i].name);
+            uart_puts("\r\nUsage:   ");
+            uart_puts(commands[i].usage);
+            uart_puts("\r\nInfo:    ");
+            uart_puts(commands[i].info);
+            uart_puts("\r\n");
+            found = 1;
+            break;
+        }
+    }
+    if (!found) {
+        uart_puts("Unknown command: ");
+        uart_puts(arg);
+        uart_puts("\r\n");
+    }
+}
 void clear_screen() {
     uart_puts("\033[2J"); // Clear entire screen
     uart_puts("\033[H");  // Move cursor to top-left
@@ -163,42 +203,9 @@ void run_command(char *input) {
     if (strcmp(cmd, "help") == 0) {
         if (arg[0] == '\0') {
             // no argument → show brief info
-            uart_puts("Available commands:\r\n");
-            for (int i = 0; i < command_count; i++) {
-                uart_puts("  ");
-                uart_puts(commands[i].name);
-                // pad spaces so usages align (let's assume max name length = 10)
-                int len = strlen(commands[i].name);
-                int pad = 12 - len; // adjust 12 based on desired column width
-                for (int j = 0; j < pad; j++) {
-                    uart_puts(" ");
-                }
-                uart_puts(" - ");
-                uart_puts(commands[i].usage);
-                uart_puts("\r\n");
-            }
-            uart_puts("\r\nType 'help <command>' for more details.\r\n");
+            brief_help();
         } else {
-            // show details for specific command
-            int found = 0;
-            for (int i = 0; i < command_count; i++) {
-                if (strcmp(arg, commands[i].name) == 0) {
-                    uart_puts("Command: ");
-                    uart_puts(commands[i].name);
-                    uart_puts("\r\nUsage:   ");
-                    uart_puts(commands[i].usage);
-                    uart_puts("\r\nInfo:    ");
-                    uart_puts(commands[i].info);
-                    uart_puts("\r\n");
-                    found = 1;
-                    break;
-                }
-            }
-            if (!found) {
-                uart_puts("Unknown command: ");
-                uart_puts(arg);
-                uart_puts("\r\n");
-            }
+            detailed_help(arg);
         }
     } 
     else if(strcmp(cmd, "clear") == 0){

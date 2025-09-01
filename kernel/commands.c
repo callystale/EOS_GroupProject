@@ -1,6 +1,10 @@
 #include "commands.h"
 #include "mbox.h"
 #include "../uart/uart1.h"
+#include "framebf.h"
+#include "background.h"
+
+#define FONT_HEIGHT 8
 
 typedef struct {
     const char *name;
@@ -131,6 +135,29 @@ void get_board_info() {
     }
 }
 
+void task_2i_display_names() 
+{
+    drawImage(background_data, 0, 0, BG_WIDTH, BG_HEIGHT);
+
+    char *names[] = {"Thieu Kiet", "Phuong Ngan", "Hoang Son", "Lee Dohwan", "Nhat Anh"};
+    unsigned int colors[] = {
+        0x00FFFFFF, 
+        0x00FFD700,
+        0x00000000,
+        0x0000FFFF,
+        0x005E44C8
+    };
+
+    
+	int x_positions[] = {20, 110, 210, 300, 400};
+    int y_position = 220;  
+
+    for (int i = 0; i < 5; i++) {
+        drawString(x_positions[i], y_position, names[i], colors[i], 1);
+    }
+
+}
+
 void run_command(char *input) {
     char cmd[32];
     char arg[32];
@@ -182,6 +209,9 @@ void run_command(char *input) {
     }
     else if(strcmp(cmd, "showinfo") == 0){
         get_board_info();
+    }
+    else if(strcmp(cmd, "task2") == 0){
+        task_2i_display_names();
     }
     else if (cmd[0] == '\0') {
         // empty input → do nothing

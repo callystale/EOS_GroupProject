@@ -2,6 +2,8 @@
 #include "mbox.h"
 #include "../uart/uart0.h"
 #include "../uart/uart1.h"
+#include "font.h"
+#include "framebf.h"
 
 //Use RGBA32 (32 bits for each pixel)
 #define COLOR_DEPTH 32
@@ -205,11 +207,49 @@ void drawLCircle(int center_x, int center_y, int radius, unsigned int attr, int 
 
 
 
+/* Functions to display text on the screen */
+// NOTE: zoom = 0 will not display the character
+void drawChar(unsigned char ch, int x, int y, unsigned int attr, int zoom)
+{
+    unsigned char *glyph = (unsigned char *)&font + (ch < FONT_NUMGLYPHS ? ch : 0) * FONT_BPG;
+
+    for (int i = 1; i <= (FONT_HEIGHT*zoom); i++) {
+		for (int j = 0; j< (FONT_WIDTH*zoom); j++) {
+			unsigned char mask = 1 << (j/zoom);
+            if (*glyph & mask) { //only draw pixels belong to the character glyph
+			    drawPixelARGB32(x + j, y + i, attr);
+            }
+		}
+		glyph += (i % zoom) ? 0 : FONT_BPL;
+    }
+}
 
 
+void drawString(int x, int y, char *str, unsigned int attr, int zoom)
+{
+    while (*str) {
+        if (*str == '\r') {
+            x = 0;
+        } else if (*str == '\n') {
+            x = 0; 
+			y += (FONT_HEIGHT*zoom);
+        } else {
+            drawChar(*str, x, y, attr, zoom);
+            x += (FONT_WIDTH*zoom);
+        }
+        str++;
+    }
+}
+/* Example: Show green HELLO WORLD text on the screen */
+// drawString(0, 0, "HELLO WORLD !!!", 0x0000BB00, 1);
 
-
-
-
+/* Functions to display image on the screen */
+void drawImage(const unsigned int pixel_data[], int pos_x, int pos_y, int width, int height){
+    for (int i = 0; i < width*height; i++){
+        int x = pos_x + (i % width);
+        int y = pos_y + (i / width);
+        drawPixelARGB32(x, y, pixel_data[i]);
+    }
+}
 
 

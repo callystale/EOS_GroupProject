@@ -66,7 +66,6 @@ void main()
             buffer[index] = '\0';   // terminate string
             run_command(buffer);
             index = 0;
-
             // reprint prompt immediately
             uart_puts("OkkOS> ");
         } 
@@ -83,7 +82,7 @@ void main()
                 buffer[index++] = c;
                 uart_sendc(c);       // echo char
             }
-        }
+        } 
         // ignore other keys
     }
 }

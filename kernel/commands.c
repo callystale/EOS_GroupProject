@@ -47,9 +47,9 @@ Command commands[] = {
     },
     {
         "task",
-        "run task<number>",
-        "task2: Display names of all members, image and video \t task3: run a small game\n"
-        "Example:\r\n  OkkOS> run task2"
+        "task<number>",
+        "task2: Display names of all members, image and video \t task3: Run a small game\n"
+        "Example:\r\n  OkkOS> task2"
     }
 };
 
@@ -136,25 +136,22 @@ void get_board_info() {
 }
 
 void task_2i_display_names() 
-{
-    drawImage(background_data, 0, 0, BG_WIDTH, BG_HEIGHT);
-
-    char *names[] = {"Thieu Kiet", "Phuong Ngan", "Hoang Son", "Lee Dohwan", "Nhat Anh"};
-    unsigned int colors[] = {
-        0x00FFFFFF, 
-        0x00FFD700,
-        0x00000000,
-        0x0000FFFF,
-        0x005E44C8
+{   static char *names[] = {
+    "Thieu Kiet", "Phuong Ngan", "Hoang Son", "Lee Dohwan", "Nhat Anh"
     };
-
-    
-	int x_positions[] = {20, 110, 210, 300, 400};
+    static unsigned int colors[] = {
+        0x00FFFFFF, 0x00FFD700, 0x00FF0000, 0x0000FFFF, 0x005E44C8
+    };
+    static int x_positions[] = {20, 110, 210, 300, 400};
     int y_position = 220;  
 
+    drawImage(background_data, 0, 0, BG_WIDTH, BG_HEIGHT);
+    uart_puts("Background image displayed.\r\n");
+   
     for (int i = 0; i < 5; i++) {
         drawString(x_positions[i], y_position, names[i], colors[i], 1);
     }
+    uart_puts("Displaying names on the screen...\r\n");
 
 }
 

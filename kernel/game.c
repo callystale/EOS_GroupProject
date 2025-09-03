@@ -2,6 +2,7 @@
 #include "../uart/uart1.h"
 #include "framebf.h"
 #include "../assets/level1_map.h"
+#include "../assets/shoot_chicken.h"
 #include "player.h"
 
 #define SCREEN_WIDTH  640
@@ -58,7 +59,7 @@ void draw_map(int camera_x) {
 void task3_sidescroller() {
     int camera_x = 0;
     int player_x = 100; // screen X position
-    int player_y = 350; // screen Y position
+    int player_y = 250; // screen Y position
 
     uart_puts("\r\n--- Side Scroller Demo ---\r\n");
     uart_puts("\r\nPress any key to start!\r\n");
@@ -84,7 +85,7 @@ void task3_sidescroller() {
         }
         // Redraw everything every iteration
         draw_map(camera_x);
-        drawImage(player_sprite, 100, 350, PLAYER_WIDTH, PLAYER_HEIGHT);
+        drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
     }
 }
 

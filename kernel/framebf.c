@@ -266,3 +266,24 @@ void drawImage(const unsigned int pixel_data[], int pos_x, int pos_y, int width,
 }
 
 
+void drawImageRGBA32(const unsigned int *img, int img_w, int img_h, int pos_x, int pos_y) {
+    for (int y = 0; y < img_h; y++) {
+        for (int x = 0; x < img_w; x++) {
+            unsigned int pixel = img[y * img_w + x];
+
+            // Extract RGBA
+            unsigned char r = (pixel >> 24) & 0xFF;
+            unsigned char g = (pixel >> 16) & 0xFF;
+            unsigned char b = (pixel >> 8)  & 0xFF;
+            unsigned char a = pixel & 0xFF;
+
+            // Skip fully transparent pixels
+            if (a == 0) continue;
+
+            drawPixelRGBA32(pos_x + x, pos_y + y, r, g, b, a);
+        }
+    }
+}
+
+
+

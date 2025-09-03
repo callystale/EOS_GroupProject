@@ -51,7 +51,7 @@ void main()
     drawRectARGB32(200,200,400,400,0x000000CC,1); //BLUE
     drawRectARGB32(250,250,400,400,0x00FFFF00,1); //YELLOW
     drawPixelARGB32(300, 300, 0x00FF0000); //RED
-    drawString(0, 0, "HELLO WORLD !!!", 0x0000BB00, 1);
+    drawString(0, 0, "HELLO WORLD !!! WELCOME TO OKKOS  ( ^ _ ^ ) ", 0x0000BB00, 1);
 
     // input buffer
     char buffer[128];

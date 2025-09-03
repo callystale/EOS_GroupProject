@@ -3,6 +3,7 @@
 #include "../uart/uart1.h"
 #include "framebf.h"
 #include "background.h"
+#include "game.h"
 
 #define FONT_HEIGHT 8
 
@@ -216,6 +217,9 @@ void run_command(char *input) {
     }
     else if(strcmp(cmd, "task2") == 0){
         task_2i_display_names();
+    }
+    else if(strcmp(cmd, "task3") == 0){
+        task3_sidescroller();
     }
     else if (cmd[0] == '\0') {
         // empty input → do nothing

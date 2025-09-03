@@ -119,6 +119,18 @@ void drawPixelARGB32(int x, int y, unsigned int attr)
 	*((unsigned int*)(fb + offs)) = attr;
 }
 
+void drawPixelRGBA32(int x, int y, unsigned char r, unsigned char g, unsigned char b, unsigned char a) 
+{
+    int offs = (y * pitch) + (COLOR_DEPTH / 8 * x);
+
+    // Write in BGRA order for Pi framebuffer
+    *(fb + offs    ) = b; // Blue
+    *(fb + offs + 1) = g; // Green
+    *(fb + offs + 2) = r; // Red
+    *(fb + offs + 3) = a; // Alpha
+}
+
+
 
 void drawRectARGB32(int x1, int y1, int x2, int y2, unsigned int attr, int fill)
 {

@@ -38,17 +38,21 @@ void draw_map(int camera_x) {
             int map_x = camera_x + x;
             int map_y = y;
             if (map_x >= MAP_WIDTH) map_x = MAP_WIDTH - 1;
-            uint32_t color = level1_map[map_y * MAP_WIDTH + map_x];
-            drawPixelARGB32(x, y, color);
+
+            uint32_t pixel = level1_map[map_y * MAP_WIDTH + map_x];
+
+            // Extract RGBA directly because both map & framebuffer use RGBA
+            unsigned char r = (pixel >> 24) & 0xFF;
+            unsigned char g = (pixel >> 16) & 0xFF;
+            unsigned char b = (pixel >> 8) & 0xFF;
+            unsigned char a = pixel & 0xFF;
+
+            drawPixelRGBA32(x, y, r, g, b, a);
         }
     }
 }
 
-void clearScreen() {
-    for (int y = 0; y < SCREEN_HEIGHT; y++)
-        for (int x = 0; x < SCREEN_WIDTH; x++)
-            drawPixelARGB32(x, y, 0xFF000000); // black background
-}
+
 
 
 void task3_sidescroller() {
@@ -79,7 +83,6 @@ void task3_sidescroller() {
             camera_x -= 100;            // scroll map left when at edge
         }
         // Redraw everything every iteration
-        clearScreen();
         draw_map(camera_x);
         drawImage(player_sprite, 100, 350, PLAYER_WIDTH, PLAYER_HEIGHT);
     }

@@ -5,8 +5,8 @@
 #include "../assets/shoot_chicken.h"
 #include "player.h"
 
-#define SCREEN_WIDTH  640
-#define SCREEN_HEIGHT 480
+#define SCREEN_WIDTH  500
+#define SCREEN_HEIGHT 500
 
 // ---------------- Turn-based Game ----------------
 typedef struct {
@@ -68,17 +68,23 @@ void task3_sidescroller() {
     while (1) {
         // Non-blocking read if your uart_getc supports it
         char c = uart_getc(); // or implement non-blocking
-
         if (c == 'q') break;
-
+        
         if (c == 'd') {
-        if (player_x < SCREEN_WIDTH - PLAYER_WIDTH - 10)
-            player_x += 100;            // move player on screen
-        else if (camera_x < MAP_WIDTH - SCREEN_WIDTH)
-            camera_x += 100;            // scroll map when player reaches edge
+            // Check if player WOULD hit the border if they moved
+            if (player_x + PLAYER_WIDTH/2 + 200 > SCREEN_WIDTH- 170) {
+                // Moving would put player past border - scroll camera instead
+                if (camera_x < MAP_WIDTH - SCREEN_WIDTH - 50) {
+                    camera_x += 100;
+                    player_x -= 50;
+                }
+            } else {
+                // Safe to move player
+                player_x += 100;
+            }
         }
         else if (c == 'a') {
-            if (player_x > 10)
+            if (player_x > 40)
                 player_x -= 100;            // move player left on screen
             else if (camera_x > 0)
                 camera_x -= 100;            // scroll map left when at edge

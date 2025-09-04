@@ -84,7 +84,7 @@ void task3_sidescroller() {
             }
         }
         else if (c == 'a') {
-            if (player_x > 40)
+            if (player_x > 50)
                 player_x -= 100;            // move player left on screen
             else if (camera_x > 0)
                 camera_x -= 100;            // scroll map left when at edge

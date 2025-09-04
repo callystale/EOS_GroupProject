@@ -61,8 +61,8 @@ void task3_sidescroller() {
     int player_x = 100; // screen X position
     int player_y = 250; // screen Y position
 
-    uart_puts("\r\n--- Side Scroller Demo ---\r\n");
-    uart_puts("\r\nPress any key to start!\r\n");
+    uart_puts("\r\n--- Game Start ---\r\n");
+    uart_puts("\r\nPRESS ANY KEY TO START!\r\n");
     uart_puts("Controls: d = move right, a = move left, q = quit\r\n");
 
     while (1) {
@@ -78,10 +78,10 @@ void task3_sidescroller() {
             camera_x += 100;            // scroll map when player reaches edge
         }
         else if (c == 'a') {
-        if (player_x > 10)
-            player_x -= 100;            // move player left on screen
-        else if (camera_x > 0)
-            camera_x -= 100;            // scroll map left when at edge
+            if (player_x > 10)
+                player_x -= 100;            // move player left on screen
+            else if (camera_x > 0)
+                camera_x -= 100;            // scroll map left when at edge
         }
         // Redraw everything every iteration
         draw_map(camera_x);

@@ -3,6 +3,8 @@
 #include "mbox.h"
 #include "framebf.h"
 #include "commands.h"
+#include "video_bitmap.h"
+#include "video_player.h"
 
 #define WELCOME_MSG \
 " ####### ####### ####### #######  #####  #        #####    ###      \n" \
@@ -45,7 +47,7 @@ void main()
 	// show initial prompt
     uart_puts("OkkOS> ");
 
-    // Draw something on the screen (unchanged)
+    // For testing only: Draw something on the screen (unchanged) 
     drawRectARGB32(100,100,400,400,0x00AA0000,1); //RED
     drawRectARGB32(150,150,400,400,0x0000BB00,1); //GREEN
     drawRectARGB32(200,200,400,400,0x000000CC,1); //BLUE
@@ -55,8 +57,7 @@ void main()
     drawPixelRGBA32(100,100,255,0,0,255); // should show RED
     drawPixelRGBA32(101,100,0,255,0,255); // should show GREEN
     drawPixelRGBA32(102,100,0,0,255,255); // should show BLUE
-
-
+    
 
     // input buffer
     char buffer[128];

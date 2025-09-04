@@ -1,0 +1,1 @@
+void video_player();

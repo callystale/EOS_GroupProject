@@ -42,6 +42,7 @@ extern volatile unsigned int mBuf[36];
 
 /* Function Prototypes */
 int mbox_call(unsigned int buffer_addr, unsigned char channel);
+void mbox_set_physical_wh(unsigned int w, unsigned int h, volatile unsigned int **res_data);
 
 //New Tags for Screen Display
 #define MBOX_TAG_SETPHYWH   0x48003

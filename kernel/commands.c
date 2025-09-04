@@ -3,6 +3,7 @@
 #include "../uart/uart1.h"
 #include "framebf.h"
 #include "background.h"
+#include  "video_player.h"
 #include "game.h"
 
 #define FONT_HEIGHT 8
@@ -49,7 +50,7 @@ Command commands[] = {
     {
         "task",
         "task<number>",
-        "task2: Display names of all members, image and video \t task3: Run a small game\n"
+        "\n task2a: Display names of all members and image \n task2b: Display names of all members and image \n task3: Run a small game\n"
         "Example:\r\n  OkkOS> task2"
     }
 };
@@ -132,10 +133,19 @@ void detailed_help(char *arg){
         uart_puts("\r\n");
     }
 }
-void clear_screen() {
-    uart_puts("\033[2J"); // Clear entire screen
-    uart_puts("\033[H");  // Move cursor to top-left
+void clear_command() {
+    uart_puts("\033[2J\033[H");
+    
 }
+void clear_screen() {
+    for (int y = 0; y < 500; y++) {
+        for (int x = 0; x < 500; x++) {
+            drawPixelARGB32(x, y, 0x0);
+        }
+    }
+    uart_puts("Screen cleared.\r\n");
+}
+
 
 
 void get_board_info() {
@@ -176,7 +186,7 @@ void get_board_info() {
     }
 }
 
-void task_2i_display_names() 
+void task_2a_display_names() 
 {   static char *names[] = {
     "Thieu Kiet", "Phuong Ngan", "Hoang Son", "Lee Dohwan", "Nhat Anh"
     };
@@ -192,7 +202,7 @@ void task_2i_display_names()
     for (int i = 0; i < 5; i++) {
         drawString(x_positions[i], y_position, names[i], colors[i], 1);
     }
-    uart_puts("Displaying names on the screen...\r\n");
+    uart_puts("Displayed names on the screen.\r\n");
 
 }
 
@@ -210,15 +220,21 @@ void run_command(char *input) {
         }
     } 
     else if(strcmp(cmd, "clear") == 0){
-        clear_screen();
+        clear_command();;
     }
     else if(strcmp(cmd, "showinfo") == 0){
         get_board_info();
     }
-    else if(strcmp(cmd, "task2") == 0){
-        task_2i_display_names();
+    else if(strcmp(cmd, "task2a") == 0){
+        clear_screen();
+        task_2a_display_names();
+    }
+    else if(strcmp(cmd, "task2b") == 0){
+        clear_screen();
+        video_player();
     }
     else if(strcmp(cmd, "task3") == 0){
+        clear_screen();
         task3_sidescroller();
     }
     else if (cmd[0] == '\0') {

@@ -9,3 +9,5 @@ void drawChar(unsigned char ch, int x, int y, unsigned int attr, int zoom);
 void drawImage(const unsigned int pixel_data[], int pos_x, int pos_y, int width, int height);
 void drawLine(int x1, int y1, int x2, int y2, unsigned int attr);
 double sqrt(double number);
+void displayMultipleImages(const unsigned int image[], int startX, int startY, int w, int h);
+void wait_msec(unsigned int n);

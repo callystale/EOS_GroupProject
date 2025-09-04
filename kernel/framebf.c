@@ -285,5 +285,35 @@ void drawImageRGBA32(const unsigned int *img, int img_w, int img_h, int pos_x, i
     }
 }
 
+// Display an image for video player
+void displayMultipleImages(const unsigned int image[], int startX, int startY, int w, int h)
+{
+    int color = 0;
+    for (int y = startY; y < h + startY; y++)
+    {
+        for (int x = startX; x < w + startX; x++)
+        {
+            drawPixelARGB32(x, y, image[color]); // Draw a pixel at the current (x, y) position using the color from the image array
+            color++;                             // Move to the next color in the image data
+        }
+    }
+}
 
+/* Functions to delay, set/wait timer */
+void wait_msec(unsigned int n)
+{
+    register unsigned long f, t, r, expiredTime;
 
+    // Get the current counter frequency (Hz)
+    asm volatile("mrs %0, cntfrq_el0" : "=r"(f));
+
+    // Read the current counter value
+    asm volatile("mrs %0, cntpct_el0" : "=r"(t));
+
+    // Calculate expire value for counter
+    expiredTime = t + ((f / 1000) * n) / 1000;
+    do
+    {
+        asm volatile("mrs %0, cntpct_el0" : "=r"(r));
+    } while (r < expiredTime);
+}

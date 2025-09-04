@@ -80,3 +80,20 @@ int mbox_call(unsigned int buffer_addr, unsigned char channel)
 
     return 0;
 }
+
+// This is the additional function for video (function for setting width and height of the screen)
+void mbox_set_physical_wh(unsigned int w, unsigned int h, volatile unsigned int **res_data)
+{
+    mBuf[1] = MBOX_REQUEST;
+
+    // total 8 words: [size, req, tag, val_len, reqcode, W, H, end]
+    mBuf[0] = 8 * 4;
+    mBuf[2] = MBOX_TAG_SETPHYWH;
+    mBuf[3] = 8;         // value length (bytes)
+    mBuf[4] = 0;         // request
+    mBuf[5] = w;
+    mBuf[6] = h;
+    mBuf[7] = MBOX_TAG_LAST;
+
+    *res_data = &mBuf[5];  // output
+}

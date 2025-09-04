@@ -175,3 +175,21 @@ void uart_dec(int num)
 
 	uart_puts(str);
 }
+
+#if 1 //UART0
+unsigned int uart_ReadByteReady(){
+	return ( !(UART0_FR & UART0_FR_RXFE) );
+}
+
+#else //UART1
+unsigned int uart_ReadByteReady(){
+	return (AUX_MU_LSR & 0x01);
+}
+#endif
+
+unsigned char uart_read(){
+    unsigned char ch = 0;
+    if (uart_ReadByteReady())
+    	ch = uart_getc();
+    return ch;
+}

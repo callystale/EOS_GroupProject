@@ -11,3 +11,4 @@ void drawLine(int x1, int y1, int x2, int y2, unsigned int attr);
 double sqrt(double number);
 void displayMultipleImages(const unsigned int image[], int startX, int startY, int w, int h);
 void wait_msec(unsigned int n);
+void clear_screen();

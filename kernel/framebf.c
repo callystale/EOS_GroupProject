@@ -317,3 +317,12 @@ void wait_msec(unsigned int n)
         asm volatile("mrs %0, cntpct_el0" : "=r"(r));
     } while (r < expiredTime);
 }
+
+void clear_screen() {
+    for (int y = 0; y < 500; y++) {
+        for (int x = 0; x < 500; x++) {
+            drawPixelARGB32(x, y, 0x0);
+        }
+    }
+    uart_puts("Screen cleared.\r\n");
+}

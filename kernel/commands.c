@@ -137,14 +137,6 @@ void clear_command() {
     uart_puts("\033[2J\033[H");
     
 }
-void clear_screen() {
-    for (int y = 0; y < 500; y++) {
-        for (int x = 0; x < 500; x++) {
-            drawPixelARGB32(x, y, 0x0);
-        }
-    }
-    uart_puts("Screen cleared.\r\n");
-}
 
 
 

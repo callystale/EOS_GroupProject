@@ -53,6 +53,27 @@ void draw_map(int camera_x) {
     }
 }
 
+void handleJumping(int *player_y, int *jumping, int *jump_velocity) {
+    const int GRAVITY = 2;
+    const int GROUND_Y = 250;
+    if (*jumping) {
+        // Apply velocity to position
+        *player_y += *jump_velocity;
+        
+        // Apply gravity to velocity
+        *jump_velocity += GRAVITY;
+        
+        // Check if landed
+        if (*player_y >= GROUND_Y) {
+            *player_y = GROUND_Y;
+            *jumping = 0;
+            *jump_velocity = 0;
+        }
+    }
+}
+
+
+
 
 
 
@@ -60,14 +81,24 @@ void task3_sidescroller() {
     int camera_x = 0;
     int player_x = 100; // screen X position
     int player_y = 250; // screen Y position
+    int jumping = 0;    // is player jumping?
+    int jump_velocity = 0;
+    
 
     uart_puts("\r\n--- Game Start ---\r\n");
     uart_puts("\r\nPRESS ANY KEY TO START!\r\n");
-    uart_puts("Controls: d = move right, a = move left, q = quit\r\n");
+    uart_puts("Controls: d = move right, a = move left, w = jump up, q = quit\r\n");
+    // Draw initial frame
+    draw_map(camera_x);
+    drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
+
+    
 
     while (1) {
         // Non-blocking read if your uart_getc supports it
-        char c = uart_getc(); // or implement non-blocking
+        char c = uart_read();// or implement non-blocking
+        int needed_redraw = 0;
+
         if (c == 'q') break;
         
         if (c == 'd') {
@@ -82,16 +113,32 @@ void task3_sidescroller() {
                 // Safe to move player
                 player_x += 100;
             }
+            needed_redraw = 1;
         }
         else if (c == 'a') {
             if (player_x > 50)
                 player_x -= 100;            // move player left on screen
             else if (camera_x > 0)
                 camera_x -= 100;            // scroll map left when at edge
+            needed_redraw = 1;
+
+        } else if (c == 'w' && !jumping) {
+            jumping = 1;                    // start jump
+            jump_velocity = -20;  // Initial upward velocity
+            needed_redraw = 1;
         }
-        // Redraw everything every iteration
-        draw_map(camera_x);
-        drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
+
+        // Handle jumping
+        handleJumping( &player_y, &jumping, &jump_velocity );
+
+
+        if(needed_redraw || jumping) {
+            // Redraw only if something changed
+            draw_map(camera_x);
+            drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
+        }
+        
+        wait_msec(1000);
     }
 }
 

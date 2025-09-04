@@ -156,3 +156,4 @@ char uart_getc();
 void uart_puts(const char *s);
 void uart_hex(unsigned int num);
 void uart_dec(int num);
+void uart_read();

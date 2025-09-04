@@ -143,3 +143,23 @@ void uart_hex_byte(unsigned char b) {
     hex[2] = '\0';
     uart_puts(hex);
 }
+
+
+#if 0 //UART0
+unsigned int uart_ReadByteReady(){
+	return ( !(UART0_FR & UART0_FR_RXFE) );
+}
+
+#else //UART1
+unsigned int uart_ReadByteReady(){
+	return (AUX_MU_LSR & 0x01);
+}
+#endif
+
+unsigned char uart_read(){
+    unsigned char ch = 0;
+    if (uart_ReadByteReady())
+    	ch = uart_getc();
+    return ch;
+}
+

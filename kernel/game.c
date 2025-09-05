@@ -1,25 +1,29 @@
 #include "game.h"
 #include "../uart/uart1.h"
 #include "framebf.h"
+#include "player.h"
 #include "../assets/level1_map.h"
 #include "../assets/shoot_chicken.h"
-#include "player.h"
+#include "../assets/bullet.h"
+
 
 #define SCREEN_WIDTH  500
 #define SCREEN_HEIGHT 500
 
-// ---------------- Turn-based Game ----------------
-typedef struct {
-    char *name;
-    int hp;
-    int x;
-} TBPlayer;
+#define MAX_BULLETS 10
+#define BULLET_SPEED 7
+#define BULLET_SIZE 50
 
+// Bullet structure
 typedef struct {
-    int hp;
     int x;
-    int speed;
-} TBMonster;
+    int y;
+    int active;
+    int direction; // 1 for right, -1 for left
+} Bullet;
+
+// Global bullet array
+Bullet bullets[MAX_BULLETS];
 
 // ---------------- Side-scroller Demo ----------------
 void drawImagePart(const unsigned int *src,
@@ -73,8 +77,65 @@ void handleJumping(int *player_y, int *jumping, int *jump_velocity) {
 }
 
 
+void initBullets() {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        bullets[i].active = 0;
+        bullets[i].x = 0;
+        bullets[i].y = 0;
+        bullets[i].direction = 1;
+    }
+}
 
+void shootBullet(int player_x, int player_y, int camera_x, int facing_direction) {
+    // Find an inactive bullet slot
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (!bullets[i].active) {
+            bullets[i].active = 1;
+            bullets[i].x = player_x + camera_x + (facing_direction > 0 ? SHOOT_CHICKEN_WIDTH : 0);
+            bullets[i].y = player_y + SHOOT_CHICKEN_HEIGHT / 3;
+            bullets[i].direction = facing_direction;
+            
+            break;
+        }
+    }
+}
 
+void updateBullets(int camera_x) {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (bullets[i].active) {
+            // Move bullet
+            bullets[i].x += BULLET_SPEED * bullets[i].direction;
+            
+            // Check if bullet is out of bounds (in world coordinates)
+            if (bullets[i].x < 0 || bullets[i].x > MAP_WIDTH) {
+                bullets[i].active = 0;
+            }
+            
+            // Also deactivate if too far from visible area to save processing
+            int screen_x = bullets[i].x - camera_x;
+            if (screen_x < -100 || screen_x > SCREEN_WIDTH + 100) {
+                bullets[i].active = 0;
+            }
+        }
+    }
+}
+
+void drawBullets(int camera_x) {
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        if (bullets[i].active) {
+            int screen_x = bullets[i].x - camera_x;
+            int screen_y = bullets[i].y;
+            
+            // Only draw if bullet is on screen
+            if (screen_x >= 0 && screen_x < SCREEN_WIDTH - BULLET_SIZE &&
+                screen_y >= 0 && screen_y < SCREEN_HEIGHT - BULLET_SIZE) {
+                
+                // Draw bullet using the bullet image
+                drawImageRGBA32(bullet, BULLET_SIZE, BULLET_SIZE, screen_x, screen_y);
+            }
+        }
+    }
+}
 
 
 void task3_sidescroller() {
@@ -84,10 +145,10 @@ void task3_sidescroller() {
     int jumping = 0;    // is player jumping?
     int jump_velocity = 0;
     
-
+    initBullets();
     uart_puts("\r\n--- Game Start ---\r\n");
     uart_puts("\r\nPRESS ANY KEY TO START!\r\n");
-    uart_puts("Controls: d = move right, a = move left, w = jump up, q = quit\r\n");
+    uart_puts("Controls: d = move right, a = move left, w = jump up, s / space = shoot q = quit\r\n");
     // Draw initial frame
     draw_map(camera_x);
     drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
@@ -126,16 +187,30 @@ void task3_sidescroller() {
             jumping = 1;                    // start jump
             jump_velocity = -20;  // Initial upward velocity
             needed_redraw = 1;
+            // Handle jumping
+        
+        } else if( c == 's' || c == ' ') {
+            shootBullet(player_x, player_y, camera_x, 1); // Shoot right
+            needed_redraw = 1;
         }
 
-        // Handle jumping
         handleJumping( &player_y, &jumping, &jump_velocity );
+        updateBullets(camera_x);
 
+        // Check if there are active bullets
+        int has_active_bullets = 0;
+        for (int i = 0; i < MAX_BULLETS; i++) {
+            if (bullets[i].active) {
+                has_active_bullets = 1;
+                break;
+            }
+        }
 
-        if(needed_redraw || jumping) {
+        if(needed_redraw || jumping|| has_active_bullets) {
             // Redraw only if something changed
             draw_map(camera_x);
             drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
+            drawBullets(camera_x);
         }
         
         wait_msec(1000);

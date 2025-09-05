@@ -284,6 +284,14 @@ void drawImageRGBA32(const unsigned int *img, int img_w, int img_h, int pos_x, i
         }
     }
 }
+//  draw a pixel from a packed RGBA32 value
+void drawPixelRGBA32_Packed(int x, int y, uint32_t color) {
+    unsigned char r = (color >> 24) & 0xFF;
+    unsigned char g = (color >> 16) & 0xFF;
+    unsigned char b = (color >> 8)  & 0xFF;
+    unsigned char a =  color        & 0xFF;
+    drawPixelRGBA32(x, y, r, g, b, a);
+}
 
 // Display an image for video player
 void displayMultipleImages(const unsigned int image[], int startX, int startY, int w, int h)

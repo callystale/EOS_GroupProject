@@ -10,8 +10,8 @@
 #define SCREEN_WIDTH  500
 #define SCREEN_HEIGHT 500
 
-#define MAX_BULLETS 10
-#define BULLET_SPEED 7
+#define MAX_BULLETS 20
+#define BULLET_SPEED 1
 #define BULLET_SIZE 50
 
 // Bullet structure
@@ -26,16 +26,7 @@ typedef struct {
 Bullet bullets[MAX_BULLETS];
 
 // ---------------- Side-scroller Demo ----------------
-void drawImagePart(const unsigned int *src,
-                   int sx, int sy, int w, int h,
-                   int dx, int dy) {
-    for (int y = 0; y < h; y++) {
-        for (int x = 0; x < w; x++) {
-            unsigned int color = src[(sy + y) * MAP_WIDTH + (sx + x)];
-            drawPixelARGB32(dx + x, dy + y, color);
-        }
-    }
-}
+
 
 void draw_map(int camera_x) {
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
@@ -137,83 +128,206 @@ void drawBullets(int camera_x) {
     }
 }
 
+// Add these functions to your game.c file
+
+// Function to clear a rectangular area and fill with background data
+void clearRectWithBackground(int x, int y, int width, int height, int camera_x) {
+    // Bounds checking
+    if (x < 0) { width += x; x = 0; }
+    if (y < 0) { height += y; y = 0; }
+    if (x + width > SCREEN_WIDTH) width = SCREEN_WIDTH - x;
+    if (y + height > SCREEN_HEIGHT) height = SCREEN_HEIGHT - y;
+    
+    if (width <= 0 || height <= 0) return;
+    
+    // Redraw background pixels in the specified rectangle
+    for (int dy = 0; dy < height; dy++) {
+        for (int dx = 0; dx < width; dx++) {
+            int screen_x = x + dx;
+            int screen_y = y + dy;
+            int map_x = camera_x + screen_x;
+            int map_y = screen_y;
+            
+            // Bounds check for map
+            if (map_x >= MAP_WIDTH) map_x = MAP_WIDTH - 1;
+            if (map_y >= SCREEN_HEIGHT) continue;
+            
+            uint32_t pixel = level1_map[map_y * MAP_WIDTH + map_x];
+            
+            // Extract RGBA
+            unsigned char r = (pixel >> 24) & 0xFF;
+            unsigned char g = (pixel >> 16) & 0xFF;
+            unsigned char b = (pixel >> 8) & 0xFF;
+            unsigned char a = pixel & 0xFF;
+            
+            drawPixelRGBA32(screen_x, screen_y, r, g, b, a);
+        }
+    }
+}
+
+// Function to move character by clearing old position and drawing at new position
+void moveCharacter(int old_x, int old_y, int new_x, int new_y, 
+                  int char_width, int char_height, 
+                  const uint32_t* char_data, int camera_x) {
+    
+    // Clear old position with background
+    clearRectWithBackground(old_x, old_y, char_width, char_height, camera_x);
+    
+    // Draw character at new position
+    drawImageRGBA32(char_data, char_width, char_height, new_x, new_y);
+}
+
+// Function to move bullet (similar concept)
+void moveBullet(int old_x, int old_y, int new_x, int new_y, int camera_x) {
+    // Clear old position
+    clearRectWithBackground(old_x, old_y, BULLET_SIZE, BULLET_SIZE, camera_x);
+    
+    // Draw bullet at new position
+    int screen_x = new_x - camera_x;
+    int screen_y = new_y;
+    
+    if (screen_x >= 0 && screen_x < SCREEN_WIDTH - BULLET_SIZE &&
+        screen_y >= 0 && screen_y < SCREEN_HEIGHT - BULLET_SIZE) {
+        drawImageRGBA32(bullet, BULLET_SIZE, BULLET_SIZE, screen_x, screen_y);
+    }
+}
 
 void task3_sidescroller() {
     int camera_x = 0;
-    int player_x = 100; // screen X position
-    int player_y = 250; // screen Y position
-    int jumping = 0;    // is player jumping?
+    int player_x = 100;
+    int player_y = 250;
+    int old_player_x = player_x;
+    int old_player_y = player_y;
+    int jumping = 0;
     int jump_velocity = 0;
     
+    // Store old bullet positions for clearing - FIXED STRUCTURE
+    typedef struct {
+        int old_screen_x, old_screen_y;  // Store screen coordinates directly
+        int was_active;                   // Track if bullet was active last frame
+    } BulletPosition;
+    BulletPosition old_bullet_pos[MAX_BULLETS];
+    
     initBullets();
+    
+    // Initialize old bullet positions
+    for (int i = 0; i < MAX_BULLETS; i++) {
+        old_bullet_pos[i].old_screen_x = -1;
+        old_bullet_pos[i].old_screen_y = -1;
+        old_bullet_pos[i].was_active = 0;
+    }
+    
     uart_puts("\r\n--- Game Start ---\r\n");
-    uart_puts("\r\nPRESS ANY KEY TO START!\r\n");
     uart_puts("Controls: d = move right, a = move left, w = jump up, s / space = shoot q = quit\r\n");
+    
     // Draw initial frame
     draw_map(camera_x);
+    drawBullets(camera_x);
     drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
 
-    
-
     while (1) {
-        // Non-blocking read if your uart_getc supports it
-        char c = uart_read();// or implement non-blocking
-        int needed_redraw = 0;
+        char c = uart_read();
+        int camera_changed = 0;
+        int player_moved = 0;
 
         if (c == 'q') break;
         
+        // Store old positions
+        old_player_x = player_x;
+        old_player_y = player_y;
+        int old_camera_x = camera_x;
+        
         if (c == 'd') {
-            // Check if player WOULD hit the border if they moved
-            if (player_x + PLAYER_WIDTH/2 + 200 > SCREEN_WIDTH- 170) {
-                // Moving would put player past border - scroll camera instead
+            if (player_x + PLAYER_WIDTH/2 + 200 > SCREEN_WIDTH - 170) {
                 if (camera_x < MAP_WIDTH - SCREEN_WIDTH - 50) {
                     camera_x += 100;
                     player_x -= 50;
+                    camera_changed = 1;
                 }
             } else {
-                // Safe to move player
                 player_x += 100;
+                player_moved = 1;
             }
-            needed_redraw = 1;
         }
         else if (c == 'a') {
-            if (player_x > 50)
-                player_x -= 100;            // move player left on screen
-            else if (camera_x > 0)
-                camera_x -= 100;            // scroll map left when at edge
-            needed_redraw = 1;
-
-        } else if (c == 'w' && !jumping) {
-            jumping = 1;                    // start jump
-            jump_velocity = -20;  // Initial upward velocity
-            needed_redraw = 1;
-            // Handle jumping
-        
-        } else if( c == 's' || c == ' ') {
-            shootBullet(player_x, player_y, camera_x, 1); // Shoot right
-            needed_redraw = 1;
+            if (player_x > 50) {
+                player_x -= 100;
+                player_moved = 1;
+            } else if (camera_x > 0) {
+                camera_x -= 100;
+                camera_changed = 1;
+            }
+        } 
+        else if (c == 'w' && !jumping) {
+            jumping = 1;
+            jump_velocity = -20;
+        } 
+        else if (c == 's' || c == ' ') {
+            shootBullet(player_x, player_y, camera_x, 1);
         }
 
-        handleJumping( &player_y, &jumping, &jump_velocity );
-        updateBullets(camera_x);
+        handleJumping(&player_y, &jumping, &jump_velocity);
+        
+        if (player_y != old_player_y) {
+            player_moved = 1;
+        }
 
-        // Check if there are active bullets
-        int has_active_bullets = 0;
+        // FIXED: Store old bullet SCREEN positions before updating
         for (int i = 0; i < MAX_BULLETS; i++) {
             if (bullets[i].active) {
-                has_active_bullets = 1;
-                break;
+                old_bullet_pos[i].old_screen_x = bullets[i].x - old_camera_x;
+                old_bullet_pos[i].old_screen_y = bullets[i].y;
+                old_bullet_pos[i].was_active = 1;
+            } else {
+                old_bullet_pos[i].was_active = 0;
             }
         }
+        
+        updateBullets(camera_x);
 
-        if(needed_redraw || jumping|| has_active_bullets) {
-            // Redraw only if something changed
+        if (camera_changed) {
+            // Camera moved - full redraw
             draw_map(camera_x);
-            drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
             drawBullets(camera_x);
+            drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
+        } else {
+            // Selective redrawing
+            
+            // FIXED: Handle bullets with proper clearing
+            for (int i = 0; i < MAX_BULLETS; i++) {
+                if (old_bullet_pos[i].was_active) {
+                    // Clear the old bullet position first
+                    if (old_bullet_pos[i].old_screen_x >= 0 && 
+                        old_bullet_pos[i].old_screen_x < SCREEN_WIDTH - BULLET_SIZE &&
+                        old_bullet_pos[i].old_screen_y >= 0 && 
+                        old_bullet_pos[i].old_screen_y < SCREEN_HEIGHT - BULLET_SIZE) {
+                        
+                        clearRectWithBackground(old_bullet_pos[i].old_screen_x, 
+                                              old_bullet_pos[i].old_screen_y,
+                                              BULLET_SIZE, BULLET_SIZE, camera_x);
+                    }
+                }
+                
+                // Draw bullet at new position if still active
+                if (bullets[i].active) {
+                    int new_screen_x = bullets[i].x - camera_x;
+                    int new_screen_y = bullets[i].y;
+                    
+                    if (new_screen_x >= 0 && new_screen_x < SCREEN_WIDTH - BULLET_SIZE &&
+                        new_screen_y >= 0 && new_screen_y < SCREEN_HEIGHT - BULLET_SIZE) {
+                        drawImageRGBA32(bullet, BULLET_SIZE, BULLET_SIZE, new_screen_x, new_screen_y);
+                    }
+                }
+            }
+            
+            // Handle player movement (after bullets so player appears on top)
+            if (player_moved) {
+                moveCharacter(old_player_x, old_player_y, player_x, player_y,
+                            SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT,
+                            shoot_chicken, camera_x);
+            }
         }
         
         wait_msec(1000);
     }
 }
-

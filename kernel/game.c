@@ -23,8 +23,8 @@
 #endif
 
 // Enemy draw size (adjust if your bee asset uses different values)
-#define ENEMY_WIDTH  250
-#define ENEMY_HEIGHT 250
+#define ENEMY_WIDTH  200
+#define ENEMY_HEIGHT 200
 
 // Bullet structure
 typedef struct {
@@ -110,9 +110,37 @@ void updateBullets(int camera_x) {
     for (int i = 0; i < MAX_BULLETS; i++) {
         if (bullets[i].active) {
             bullets[i].x += BULLET_SPEED * bullets[i].direction;
+
+            // Check bullet off-screen
             if (bullets[i].x < 0 || bullets[i].x > MAP_WIDTH) {
                 bullets[i].active = 0;
+                continue;
             }
+
+            // --- Check collision with enemy ---
+            if (enemy.active) {
+                int bullet_screen_x = bullets[i].x - camera_x;
+                int bullet_screen_y = bullets[i].y;
+
+                int enemy_screen_x = enemy.x - camera_x;
+                int enemy_screen_y = enemy.y;
+
+                // Simple AABB (axis-aligned bounding box) collision
+                if (bullet_screen_x + BULLET_SIZE > enemy_screen_x &&
+                    bullet_screen_x < enemy_screen_x + ENEMY_WIDTH &&
+                    bullet_screen_y + BULLET_SIZE > enemy_screen_y &&
+                    bullet_screen_y < enemy_screen_y + ENEMY_HEIGHT) {
+
+                    bullets[i].active = 0;   // bullet stops
+                    enemy.hp--;              // reduce HP
+                    if (enemy.hp <= 0) {
+                        enemy.active = 0;    // enemy disappears if HP 0
+                    }
+                    continue; // no further bullet movement
+                }
+            }
+
+            // Deactivate bullets far off-screen
             int screen_x = bullets[i].x - camera_x;
             if (screen_x < -100 || screen_x > SCREEN_WIDTH + 100) {
                 bullets[i].active = 0;
@@ -120,6 +148,38 @@ void updateBullets(int camera_x) {
         }
     }
 }
+
+void drawEnemy(int camera_x) {
+    if (!enemy.active) return;
+
+    int enemy_screen_x = enemy.x - camera_x;
+    if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH) {
+        drawImageRGBA32(bee, ENEMY_WIDTH, ENEMY_HEIGHT, enemy_screen_x, enemy.y);
+
+        // Draw HP bar (red background, green HP)
+        int bar_width = ENEMY_WIDTH;
+        int bar_height = 10;
+        int bar_x = enemy_screen_x;
+        int bar_y = enemy.y - 20;  // above enemy
+        // only draw if enemy has more than 1 HP
+        // so that when enemy is "dead" (0 HP) the bar is not shown
+        if(enemy.hp > 1){
+            for (int x = 0; x < bar_width; x++) {
+                for (int y = 0; y < bar_height; y++) {
+                    if (x < (bar_width * enemy.hp) / 10)
+                        drawPixelRGBA32(bar_x + x, bar_y + y, 0, 255, 0, 255); // green
+                    else
+                        drawPixelRGBA32(bar_x + x, bar_y + y, 255, 0, 0, 255); // red
+                }
+            }
+        } else{
+            drawString( bar_x, bar_y - 20, "Enemy defeated!", 0xFFFFFFFF, 2);
+        }
+        
+    }
+    uart_dec(enemy.hp); uart_puts(" HP\r\n");
+}
+
 
 void drawBullets(int camera_x) {
     for (int i = 0; i < MAX_BULLETS; i++) {
@@ -209,7 +269,7 @@ void task3_sidescroller() {
     enemy.move_timer = 2000;
     // place enemy near the right side of the visible screen (world coords)
     enemy.x = camera_x + SCREEN_WIDTH - ENEMY_WIDTH - 20; // visible on-screen at start
-    enemy.y = player_y; // same baseline as chicken
+    enemy.y = player_y - 30; // same baseline as chicken
 
     uart_puts("\r\n--- Game Start ---\r\n");
     uart_puts("Controls: d = move right, a = move left, w = jump up, s / space = shoot q = quit\r\n");
@@ -222,7 +282,7 @@ void task3_sidescroller() {
     if (enemy.active) {
         int enemy_screen_x = enemy.x - camera_x;
         if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
-            drawImageRGBA32(bee, ENEMY_WIDTH, ENEMY_HEIGHT, enemy_screen_x, enemy.y);
+            drawEnemy(camera_x);
     }
 
     while (1) {
@@ -288,7 +348,7 @@ void task3_sidescroller() {
             if (enemy.active) {
                 int enemy_screen_x = enemy.x - camera_x;
                 if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
-                    drawImageRGBA32(bee, ENEMY_WIDTH, ENEMY_HEIGHT, enemy_screen_x, enemy.y);
+                    drawEnemy(camera_x);
             }
         } else {
             // selective redraw: clear old bullets using OLD camera, then draw new bullets
@@ -321,7 +381,7 @@ void task3_sidescroller() {
             if (enemy.active) {
                 int enemy_screen_x = enemy.x - camera_x;
                 if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
-                    drawImageRGBA32(bee, ENEMY_WIDTH, ENEMY_HEIGHT, enemy_screen_x, enemy.y);
+                    drawEnemy(camera_x);
             }
         }
 

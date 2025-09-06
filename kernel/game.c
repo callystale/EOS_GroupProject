@@ -46,10 +46,11 @@ typedef struct {
     int active;
     int timer;      // ms if you want
     int move_timer; // ms if you want
-    char sprite;
+    int *sprite;
 } Enemy;
 
 Enemy enemy; // single enemy for now
+
 
 // ---------------- Side-scroller Demo ----------------
 // clear rect from background using camera_x (world -> screen)
@@ -182,7 +183,7 @@ void drawEnemy(int camera_x) {
 
     int enemy_screen_x = enemy.x - camera_x;
     if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH) {
-        drawImageRGBA32(bee, ENEMY_WIDTH, ENEMY_HEIGHT, enemy_screen_x, enemy.y);
+        drawImageRGBA32(enemy.sprite, ENEMY_WIDTH, ENEMY_HEIGHT, enemy_screen_x, enemy.y);
 
         // Draw HP bar (red background, green HP)
         int bar_width = ENEMY_WIDTH;
@@ -324,6 +325,7 @@ void task3_sidescroller() {
     // place enemy near the right side of the visible screen (world coords)
     enemy.x = camera_x + SCREEN_WIDTH - ENEMY_WIDTH - 10; // visible on-screen at start
     enemy.y = player_y - 30; // same baseline as chicken
+    enemy.sprite = bee; // use bee sprite for enemy
     int enemyClear = 0;
 
     uart_puts("\r\n--- Game Start ---\r\n");

@@ -50,6 +50,32 @@ typedef struct {
 Enemy enemy; // single enemy for now
 
 // ---------------- Side-scroller Demo ----------------
+// clear rect from background using camera_x (world -> screen)
+void clearRectWithBackground(int x, int y, int width, int height, int camera_x) {
+    if (x < 0) { width += x; x = 0; }
+    if (y < 0) { height += y; y = 0; }
+    if (x + width > SCREEN_WIDTH) width = SCREEN_WIDTH - x;
+    if (y + height > SCREEN_HEIGHT) height = SCREEN_HEIGHT - y;
+    if (width <= 0 || height <= 0) return;
+
+    for (int dy = 0; dy < height; dy++) {
+        for (int dx = 0; dx < width; dx++) {
+            int screen_x = x + dx;
+            int screen_y = y + dy;
+            int map_x = camera_x + screen_x;
+            int map_y = screen_y;
+            if (map_x < 0) map_x = 0;
+            if (map_x >= MAP_WIDTH) map_x = MAP_WIDTH - 1;
+            if (map_y < 0 || map_y >= SCREEN_HEIGHT) continue;
+            uint32_t pixel = level1_map[map_y * MAP_WIDTH + map_x];
+            unsigned char r = (pixel >> 24) & 0xFF;
+            unsigned char g = (pixel >> 16) & 0xFF;
+            unsigned char b = (pixel >> 8) & 0xFF;
+            unsigned char a = pixel & 0xFF;
+            drawPixelRGBA32(screen_x, screen_y, r, g, b, a);
+        }
+    }
+}
 
 void draw_map(int camera_x) {
     for (int y = 0; y < SCREEN_HEIGHT; y++) {
@@ -133,7 +159,7 @@ void updateBullets(int camera_x) {
 
                     bullets[i].active = 0;   // bullet stops
                     enemy.hp--;              // reduce HP
-                    if (enemy.hp <= 0) {
+                    if (enemy.hp <= 1) {
                         enemy.active = 0;    // enemy disappears if HP 0
                     }
                     continue; // no further bullet movement
@@ -172,12 +198,10 @@ void drawEnemy(int camera_x) {
                         drawPixelRGBA32(bar_x + x, bar_y + y, 255, 0, 0, 255); // red
                 }
             }
-        } else{
-            drawString( bar_x, bar_y - 20, "Enemy defeated!", 0xFFFFFFFF, 2);
-        }
+        } 
         
     }
-    uart_dec(enemy.hp); uart_puts(" HP\r\n");
+    
 }
 
 
@@ -194,32 +218,6 @@ void drawBullets(int camera_x) {
     }
 }
 
-// clear rect from background using camera_x (world -> screen)
-void clearRectWithBackground(int x, int y, int width, int height, int camera_x) {
-    if (x < 0) { width += x; x = 0; }
-    if (y < 0) { height += y; y = 0; }
-    if (x + width > SCREEN_WIDTH) width = SCREEN_WIDTH - x;
-    if (y + height > SCREEN_HEIGHT) height = SCREEN_HEIGHT - y;
-    if (width <= 0 || height <= 0) return;
-
-    for (int dy = 0; dy < height; dy++) {
-        for (int dx = 0; dx < width; dx++) {
-            int screen_x = x + dx;
-            int screen_y = y + dy;
-            int map_x = camera_x + screen_x;
-            int map_y = screen_y;
-            if (map_x < 0) map_x = 0;
-            if (map_x >= MAP_WIDTH) map_x = MAP_WIDTH - 1;
-            if (map_y < 0 || map_y >= SCREEN_HEIGHT) continue;
-            uint32_t pixel = level1_map[map_y * MAP_WIDTH + map_x];
-            unsigned char r = (pixel >> 24) & 0xFF;
-            unsigned char g = (pixel >> 16) & 0xFF;
-            unsigned char b = (pixel >> 8) & 0xFF;
-            unsigned char a = pixel & 0xFF;
-            drawPixelRGBA32(screen_x, screen_y, r, g, b, a);
-        }
-    }
-}
 
 void moveCharacter(int old_x, int old_y, int new_x, int new_y, 
                   int char_width, int char_height, 
@@ -270,6 +268,7 @@ void task3_sidescroller() {
     // place enemy near the right side of the visible screen (world coords)
     enemy.x = camera_x + SCREEN_WIDTH - ENEMY_WIDTH - 20; // visible on-screen at start
     enemy.y = player_y - 30; // same baseline as chicken
+    int enemyClear = 0;
 
     uart_puts("\r\n--- Game Start ---\r\n");
     uart_puts("Controls: d = move right, a = move left, w = jump up, s / space = shoot q = quit\r\n");
@@ -284,8 +283,10 @@ void task3_sidescroller() {
         if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
             drawEnemy(camera_x);
     }
+    
 
     while (1) {
+
         char c = uart_read();
         if (c == 'q') break;
 
@@ -382,6 +383,13 @@ void task3_sidescroller() {
                 int enemy_screen_x = enemy.x - camera_x;
                 if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
                     drawEnemy(camera_x);
+            } else {
+                enemyClear++;
+            }
+            if (enemyClear == 1) { // make sure the clearing happens only once
+                drawString(enemy.x, enemy.y - 40, "Enemy defeated!", 0xFFFFFFFF, 2);
+                wait_msec(1000);
+                clearRectWithBackground(enemy.x - old_camera_x, enemy.y - 20, ENEMY_WIDTH, ENEMY_HEIGHT + 20, old_camera_x);
             }
         }
 

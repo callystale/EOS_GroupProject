@@ -238,6 +238,25 @@ void moveBullet(int old_x, int old_y, int new_x, int new_y, int camera_x) {
     }
 }
 
+int isCollidingWithEnemy(int next_x, int player_y, Enemy *enemy) {
+    if (!enemy->active) return 0; // no collision if enemy is dead
+
+    // Player and enemy are rectangles; check overlap
+    int player_left = next_x;
+    int player_right = next_x + PLAYER_WIDTH;
+    int player_top = player_y;
+    int player_bottom = player_y + PLAYER_HEIGHT;
+
+    int enemy_left = enemy->x;
+    int enemy_right = enemy->x + ENEMY_WIDTH;
+    int enemy_top = enemy->y;
+    int enemy_bottom = enemy->y + ENEMY_HEIGHT;
+
+    return !(player_right < enemy_left || player_left > enemy_right ||
+             player_bottom < enemy_top || player_top > enemy_bottom);
+}
+
+
 void task3_sidescroller() {
     int camera_x = 0;
     int player_x = 100;
@@ -297,6 +316,11 @@ void task3_sidescroller() {
         old_player_y = player_y;
 
         if (c == 'd') {
+            if(isCollidingWithEnemy(player_x + 100, player_y, &enemy)) {
+                uart_puts("Ouch! Collided with enemy!\r\n");
+                continue;
+            } 
+            
             if (player_x + PLAYER_WIDTH/2 + 200 > SCREEN_WIDTH - 170) {
                 if (camera_x < MAP_WIDTH - SCREEN_WIDTH - 50) {
                     camera_x += 100;

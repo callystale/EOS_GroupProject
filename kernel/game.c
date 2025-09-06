@@ -2,6 +2,7 @@
 #include "../uart/uart1.h"
 #include "framebf.h"
 #include "player.h"
+#include "timer.h"
 #include "../assets/level1_map.h"
 #include "../assets/shoot_chicken.h"
 #include "../assets/bullet.h"
@@ -256,6 +257,39 @@ int isCollidingWithEnemy(int next_x, int player_y, Enemy *enemy) {
              player_bottom < enemy_top || player_top > enemy_bottom);
 }
 
+void showCountdown() {
+    unsigned int remaining = get_remaining_time_ms();
+    unsigned int seconds = remaining / 1000;
+    unsigned int tenths = (remaining % 1000) / 100;
+    
+    char buf[50];
+    char *p = buf;
+
+    // "Shoot in: "
+    p = strcopy(p, "Shoot in: ");
+
+    // seconds
+    char secStr[10];
+    intToStr(seconds, secStr);
+    p = strcopy(p, secStr);
+
+    // decimal point
+    *p++ = '.';
+
+    // tenths
+    char tenthsStr[10];
+    intToStr(tenths, tenthsStr);
+    p = strcopy(p, tenthsStr);
+
+    // " sec"
+    p = strcopy(p, " sec");
+    *p = '\0';
+
+    uart_puts(buf);
+    uart_puts("\r\n");
+}
+
+
 
 void task3_sidescroller() {
     int camera_x = 0;
@@ -347,6 +381,23 @@ void task3_sidescroller() {
         }
         else if (c == 's' || c == ' ') {
             shootBullet(player_x, player_y, camera_x, 1);
+        } else if ( c == 't'){
+            set_shooting_timer(5000); // 5 seconds to shoot
+            while (!check_shooting_timer_expired()) {
+                showCountdown();
+                // Check input while timer runs
+                if (uart_char_available()) {  // Add this if not in your code yet
+                    char shootKey = uart_read();
+                    if (shootKey == 'f') {    // Press 'f' to actually shoot
+                        shootBullet(player_x, player_y, camera_x, 1);
+                        break;
+                    }
+                }
+                wait_msec(500);  // update every 0.5 sec
+            }
+            if (check_shooting_timer_expired()) {
+                uart_puts("Time up! Missed shot.\r\n");
+            }
         }
 
         handleJumping(&player_y, &jumping, &jump_velocity);

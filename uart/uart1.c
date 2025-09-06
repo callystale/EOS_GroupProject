@@ -163,3 +163,16 @@ unsigned char uart_read(){
     return ch;
 }
 
+static inline unsigned int get32(unsigned long addr) {
+    return *(volatile unsigned int *)addr;
+}
+
+static inline void put32(unsigned long addr, unsigned int value) {
+    *(volatile unsigned int *)addr = value;
+}
+
+
+int uart_char_available() {
+    return (get32(AUX_MU_LSR_REG) & 0x01) != 0;
+}
+

@@ -13,6 +13,9 @@
 #define AUX_MU_CNTL     (* (volatile unsigned int*)(MMIO_BASE+0x00215060))
 #define AUX_MU_STAT     (* (volatile unsigned int*)(MMIO_BASE+0x00215064))
 #define AUX_MU_BAUD     (* (volatile unsigned int*)(MMIO_BASE+0x00215068))
+#define AUX_BASE        0x3F215000    // Base for mini UART and SPI1
+#define AUX_MU_BASE     (AUX_BASE + 0x40)  // Mini UART registers start at +0x40
+#define AUX_MU_LSR_REG  (AUX_MU_BASE + 0x14)  // Line Status Register
 
 /* Function prototypes */
 void uart_init();
@@ -23,3 +26,4 @@ void uart_hex(unsigned int num);
 void uart_hex_byte(unsigned char b);
 void uart_dec(int num);
 unsigned char uart_read();
+int uart_char_available();

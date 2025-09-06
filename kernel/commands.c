@@ -2,7 +2,7 @@
 #include "mbox.h"
 #include "../uart/uart1.h"
 #include "framebf.h"
-#include "background.h"
+#include "../assets/background.h"
 #include  "video_player.h"
 #include "game.h"
 

@@ -193,3 +193,7 @@ unsigned char uart_read(){
     	ch = uart_getc();
     return ch;
 }
+
+int uart_char_available() {
+    return (get32(UART0_FR) & (1 << 4)) == 0; // RXFE bit clear = data ready
+}

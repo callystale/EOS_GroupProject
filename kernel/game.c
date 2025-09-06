@@ -46,6 +46,7 @@ typedef struct {
     int active;
     int timer;      // ms if you want
     int move_timer; // ms if you want
+    char sprite;
 } Enemy;
 
 Enemy enemy; // single enemy for now
@@ -293,12 +294,14 @@ void showCountdown() {
 
 void task3_sidescroller() {
     int camera_x = 0;
-    int player_x = 100;
+    int player_x = 50;
     int player_y = 250;
     int old_player_x = player_x;
     int old_player_y = player_y;
     int jumping = 0;
     int jump_velocity = 0;
+    int next_enemy_spawn_x = 350;  // first spawn after 300px
+    
 
     typedef struct {
         int old_screen_x, old_screen_y;
@@ -319,7 +322,7 @@ void task3_sidescroller() {
     enemy.timer = 6000;
     enemy.move_timer = 2000;
     // place enemy near the right side of the visible screen (world coords)
-    enemy.x = camera_x + SCREEN_WIDTH - ENEMY_WIDTH - 20; // visible on-screen at start
+    enemy.x = camera_x + SCREEN_WIDTH - ENEMY_WIDTH - 10; // visible on-screen at start
     enemy.y = player_y - 30; // same baseline as chicken
     int enemyClear = 0;
 
@@ -348,9 +351,10 @@ void task3_sidescroller() {
         int old_camera_x = camera_x;
         old_player_x = player_x;
         old_player_y = player_y;
+        int world_x = player_x + camera_x;  // player position in world coords
 
         if (c == 'd') {
-            if(isCollidingWithEnemy(player_x + 100, player_y, &enemy)) {
+            if(isCollidingWithEnemy(world_x + 100, player_y, &enemy)) {
                 uart_puts("Ouch! Collided with enemy!\r\n");
                 continue;
             } 
@@ -398,6 +402,19 @@ void task3_sidescroller() {
             if (check_shooting_timer_expired()) {
                 uart_puts("Time up! Missed shot.\r\n");
             }
+        }
+        // Check if player moved far enough to spawn a new enemy
+        
+        if (!enemy.active && world_x >= next_enemy_spawn_x) {
+            enemy.active = 1;
+            enemy.hp = 10;
+            enemy.x = world_x + SCREEN_WIDTH - ENEMY_WIDTH; // spawn ahead of player
+            enemy.y = player_y - 30;
+            
+            next_enemy_spawn_x = world_x + 300;  // next spawn after another 300px
+            enemyClear = 0;  // reset clear counter for the new enemy
+            
+            uart_puts("New enemy appeared!\r\n");
         }
 
         handleJumping(&player_y, &jumping, &jump_velocity);
@@ -462,7 +479,7 @@ void task3_sidescroller() {
                 enemyClear++;
             }
             if (enemyClear == 1) { // make sure the clearing happens only once
-                drawString(enemy.x, enemy.y - 40, "Enemy defeated!", 0xFFFFFFFF, 2);
+                drawString(enemy.x - 30, enemy.y - 40, "Enemy defeated!", 0xFFFFFFFF, 2);
                 wait_msec(1000);
                 clearRectWithBackground(enemy.x - old_camera_x, enemy.y - 20, ENEMY_WIDTH, ENEMY_HEIGHT + 20, old_camera_x);
             }

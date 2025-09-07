@@ -507,4 +507,3 @@ const int background_bitmap_allArray_LEN = 1;
 const unsigned int* background_bitmap_allArray[1] = {
 	background_bitmap_Chicken_Gunny
 };
-

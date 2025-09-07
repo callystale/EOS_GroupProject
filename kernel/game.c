@@ -342,7 +342,7 @@ void task3_sidescroller() {
     int old_player_y = player_y;
     int jumping = 0;
     int jump_velocity = 0;
-    int next_enemy_spawn_x = 350;  // first spawn after 350px
+    int next_enemy_spawn_x = 300;  // first spawn after 350px
     int enemy_type = 0; // default to first enemy sprite
     int hp_increment = 5; // HP increase per enemy
     

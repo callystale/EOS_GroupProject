@@ -46,7 +46,7 @@ typedef struct {
     int active;
     int timer;      // ms if you want
     int move_timer; // ms if you want
-    int *sprite;
+    uint32_t *sprite;
 } Enemy;
 
 Enemy enemy; // single enemy for now
@@ -182,32 +182,68 @@ void drawEnemy(int camera_x) {
     if (!enemy.active) return;
 
     int enemy_screen_x = enemy.x - camera_x;
-    if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH) {
-        drawImageRGBA32(enemy.sprite, ENEMY_WIDTH, ENEMY_HEIGHT, enemy_screen_x, enemy.y);
-
-        // Draw HP bar (red background, green HP)
-        int bar_width = ENEMY_WIDTH;
+    int enemy_screen_y = enemy.y;
+    
+    // Calculate clipping bounds
+    int src_start_x = 0;  // source sprite x offset
+    int dst_start_x = enemy_screen_x;  // destination screen x
+    int draw_width = ENEMY_WIDTH;
+    
+    // Clip left side
+    if (enemy_screen_x < 0) {
+        src_start_x = -enemy_screen_x;  // skip pixels from left of sprite
+        dst_start_x = 0;                // start drawing at screen edge
+        draw_width += enemy_screen_x;   // reduce width
+    }
+    
+    // Clip right side
+    if (dst_start_x + draw_width > SCREEN_WIDTH) {
+        draw_width = SCREEN_WIDTH - dst_start_x;
+    }
+    
+    // Draw the clipped sprite pixel by pixel
+    if (draw_width > 0 && enemy_screen_y >= 0 && enemy_screen_y < SCREEN_HEIGHT - ENEMY_HEIGHT) {
+        for (int y = 0; y < ENEMY_HEIGHT; y++) {
+            for (int x = 0; x < draw_width; x++) {
+                int src_x = src_start_x + x;
+                int src_y = y;
+                int dst_x = dst_start_x + x;
+                int dst_y = enemy_screen_y + y;
+                
+                // Get pixel from enemy.sprite
+                uint32_t pixel = enemy.sprite[src_y * ENEMY_WIDTH + src_x];
+                unsigned char r = (pixel >> 24) & 0xFF;
+                unsigned char g = (pixel >> 16) & 0xFF;
+                unsigned char b = (pixel >> 8) & 0xFF;
+                unsigned char a = pixel & 0xFF;
+                
+                // Only draw if pixel is not fully transparent
+                if (a > 0) {
+                    drawPixelRGBA32(dst_x, dst_y, r, g, b, a);
+                }
+            }
+        }
+    }
+    
+    // Draw HP bar above enemy
+    if (enemy.hp > 1) {
+        int bar_width = draw_width; // use clipped width
         int bar_height = 10;
-        int bar_x = enemy_screen_x;
-        int bar_y = enemy.y - 20;  // above enemy
-        // only draw if enemy has more than 1 HP
-        // so that when enemy is "dead" (0 HP) the bar is not shown
-        if(enemy.hp > 1){
+        int bar_x = dst_start_x;    // use clipped x position
+        int bar_y = enemy_screen_y - 20;
+        
+        if (bar_y >= 0 && bar_y < SCREEN_HEIGHT - bar_height) {
             for (int x = 0; x < bar_width; x++) {
                 for (int y = 0; y < bar_height; y++) {
                     if (x < (bar_width * enemy.hp) / 10)
-                        drawPixelRGBA32(bar_x + x, bar_y + y, 0, 255, 0, 255); // green
+                        drawPixelRGBA32(bar_x + x, bar_y + y, 0, 255, 0, 255);
                     else
-                        drawPixelRGBA32(bar_x + x, bar_y + y, 255, 0, 0, 255); // red
+                        drawPixelRGBA32(bar_x + x, bar_y + y, 255, 0, 0, 255);
                 }
             }
-        } 
-        
-    }
-    
+        }
+    } 
 }
-
-
 void drawBullets(int camera_x) {
     for (int i = 0; i < MAX_BULLETS; i++) {
         if (bullets[i].active) {
@@ -325,7 +361,7 @@ void task3_sidescroller() {
     // place enemy near the right side of the visible screen (world coords)
     enemy.x = camera_x + SCREEN_WIDTH - ENEMY_WIDTH - 10; // visible on-screen at start
     enemy.y = player_y - 30; // same baseline as chicken
-    enemy.sprite = bee; // use bee sprite for enemy
+    enemy.sprite = bee; // assign sprite
     int enemyClear = 0;
 
     uart_puts("\r\n--- Game Start ---\r\n");
@@ -481,7 +517,7 @@ void task3_sidescroller() {
                 enemyClear++;
             }
             if (enemyClear == 1) { // make sure the clearing happens only once
-                drawString(enemy.x - 30, enemy.y - 40, "Enemy defeated!", 0xFFFFFFFF, 2);
+                drawString(player_x, player_y, "Enemy defeated!", 0xFFFFFFFF, 2);
                 wait_msec(1000);
                 clearRectWithBackground(enemy.x - old_camera_x, enemy.y - 20, ENEMY_WIDTH, ENEMY_HEIGHT + 20, old_camera_x);
             }

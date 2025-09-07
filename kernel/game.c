@@ -6,7 +6,13 @@
 #include "../assets/level1_map.h"
 #include "../assets/shoot_chicken.h"
 #include "../assets/bullet.h"
-#include "../assets/bee.h"   // <- enemy sprite
+#include "../assets/bee.h"  
+#include "../assets/fox.h" 
+#include "../assets/snake.h" 
+#include "../assets/box.h" 
+#include "../assets/kfc.h" 
+#include "../assets/win.h" 
+#include "../assets/lose.h" 
 
 #define SCREEN_WIDTH  500
 #define SCREEN_HEIGHT 500
@@ -46,11 +52,10 @@ typedef struct {
     int active;
     int timer;      // ms if you want
     int move_timer; // ms if you want
-    uint32_t *sprite;
 } Enemy;
 
 Enemy enemy; // single enemy for now
-
+const uint32_t* ENEMY_SPRITES[5] = { fox, snake, box, kfc, bee }; // array of enemy sprites
 
 // ---------------- Side-scroller Demo ----------------
 // clear rect from background using camera_x (world -> screen)
@@ -178,7 +183,7 @@ void updateBullets(int camera_x) {
     }
 }
 
-void drawEnemy(int camera_x) {
+void drawEnemy(int camera_x, int enemy_type) {
     if (!enemy.active) return;
 
     int enemy_screen_x = enemy.x - camera_x;
@@ -210,8 +215,8 @@ void drawEnemy(int camera_x) {
                 int dst_x = dst_start_x + x;
                 int dst_y = enemy_screen_y + y;
                 
-                // Get pixel from enemy.sprite
-                uint32_t pixel = enemy.sprite[src_y * ENEMY_WIDTH + src_x];
+                // Get pixel 
+                uint32_t pixel = ENEMY_SPRITES[enemy_type][src_y * ENEMY_WIDTH + src_x];
                 unsigned char r = (pixel >> 24) & 0xFF;
                 unsigned char g = (pixel >> 16) & 0xFF;
                 unsigned char b = (pixel >> 8) & 0xFF;
@@ -337,7 +342,9 @@ void task3_sidescroller() {
     int old_player_y = player_y;
     int jumping = 0;
     int jump_velocity = 0;
-    int next_enemy_spawn_x = 350;  // first spawn after 300px
+    int next_enemy_spawn_x = 350;  // first spawn after 350px
+    int enemy_type = 0; // default to first enemy sprite
+    int hp_increment = 5; // HP increase per enemy
     
 
     typedef struct {
@@ -361,7 +368,6 @@ void task3_sidescroller() {
     // place enemy near the right side of the visible screen (world coords)
     enemy.x = camera_x + SCREEN_WIDTH - ENEMY_WIDTH - 10; // visible on-screen at start
     enemy.y = player_y - 30; // same baseline as chicken
-    enemy.sprite = bee; // assign sprite
     int enemyClear = 0;
 
     uart_puts("\r\n--- Game Start ---\r\n");
@@ -375,7 +381,7 @@ void task3_sidescroller() {
     if (enemy.active) {
         int enemy_screen_x = enemy.x - camera_x;
         if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
-            drawEnemy(camera_x);
+            drawEnemy(camera_x, enemy_type);
     }
     
 
@@ -390,6 +396,8 @@ void task3_sidescroller() {
         old_player_x = player_x;
         old_player_y = player_y;
         int world_x = player_x + camera_x;  // player position in world coords
+
+       
 
         if (c == 'd') {
             if(isCollidingWithEnemy(world_x + 100, player_y, &enemy)) {
@@ -444,15 +452,17 @@ void task3_sidescroller() {
         // Check if player moved far enough to spawn a new enemy
         
         if (!enemy.active && world_x >= next_enemy_spawn_x) {
+            uart_puts("\n New enemy appeared!\r");
+            uart_puts("\n HP Level:");
             enemy.active = 1;
-            enemy.hp = 10;
+            enemy.hp = 10 + (enemy_type * hp_increment); // reset to 10 then increase by 5 each time
+            uart_dec(enemy.hp);
             enemy.x = world_x + SCREEN_WIDTH - ENEMY_WIDTH; // spawn ahead of player
             enemy.y = player_y - 30;
-            
+            enemy_type++;
             next_enemy_spawn_x = world_x + 300;  // next spawn after another 300px
             enemyClear = 0;  // reset clear counter for the new enemy
-            
-            uart_puts("New enemy appeared!\r\n");
+            uart_puts("\r\n");
         }
 
         handleJumping(&player_y, &jumping, &jump_velocity);
@@ -479,7 +489,7 @@ void task3_sidescroller() {
             if (enemy.active) {
                 int enemy_screen_x = enemy.x - camera_x;
                 if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
-                    drawEnemy(camera_x);
+                    drawEnemy(camera_x, enemy_type);
             }
         } else {
             // selective redraw: clear old bullets using OLD camera, then draw new bullets
@@ -512,7 +522,7 @@ void task3_sidescroller() {
             if (enemy.active) {
                 int enemy_screen_x = enemy.x - camera_x;
                 if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
-                    drawEnemy(camera_x);
+                    drawEnemy(camera_x, enemy_type);
             } else {
                 enemyClear++;
             }
@@ -521,6 +531,14 @@ void task3_sidescroller() {
                 wait_msec(1000);
                 clearRectWithBackground(enemy.x - old_camera_x, enemy.y - 20, ENEMY_WIDTH, ENEMY_HEIGHT + 20, old_camera_x);
             }
+        }
+         if(enemy_type > 4){
+            // Player wins
+            clear_screen();
+            drawImageRGBA32(win,500,500,0,0);
+            drawString(100, 50, "Congratz!! You Win!", 0xFFFFFFFF, 2);
+            uart_puts("You Win!\r\n");
+            break;
         }
 
         wait_msec(1000); // keep your original tick; lower to ~16 for smoother

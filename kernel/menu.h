@@ -23,5 +23,5 @@ typedef struct {
 void menu_init_region(Menu *m, const char **items, int count, int x, int y, int w, int h);
 void menu_handle_key(Menu *m, char key);         // w/s or j/k, Enter
 void menu_render(const Menu *m);
-void show_main_menu(void);
+int show_main_menu();
 

@@ -13,6 +13,7 @@
 #include "../assets/kfc.h" 
 #include "../assets/win.h" 
 #include "../assets/lose.h" 
+#include "menu.h"
 
 #define SCREEN_WIDTH  500
 #define SCREEN_HEIGHT 500
@@ -585,29 +586,38 @@ int game() {
     int increment = 1000;
     int base_time = 5000; // start with 5 seconds
     int max_time = 1000;
-
-    while (1) {
-        restart = task3_sidescroller(base_time);
-
-        if (restart == 1) {
-            // 't' pressed -> restart same level
-            continue;
-        } 
-        else if (restart == 2) {
-            // 'h' pressed -> next level
-            if (base_time - increment >= max_time) {
-                base_time -= increment;  // decrease time for next level
-            } else {
-                uart_puts("Maximum difficulty reached!\r\n");
+    int track = show_main_menu();
+    
+    if(track == 0){
+        while (1) {
+            restart = task3_sidescroller(base_time);
+            if (restart == 1) {
+                // 't' pressed -> restart same level
+                continue;
             }
-            
-            continue;
-        } 
-        else {
-            break;  // 'q' pressed -> quit
+            else if (restart == 2) {
+                // 'h' pressed -> next level
+                if (base_time - increment >= max_time) {
+                    base_time -= increment; // decrease time for next level
+                } else {
+                    uart_puts("Maximum difficulty reached!\r\n");
+                }
+                continue;
+            }
+            else {
+                // Store the menu result once
+                int menu_choice = show_main_menu();
+                
+                if (menu_choice == 0){
+                    continue; // back to main menu (Start Game)
+                } else if(menu_choice == 3){
+                    clear_screen();
+                    uart_puts("Exiting game...\r\n");
+                    break;
+                }
+                // Handle other menu choices (1=Options, 2=Credits) if needed
+            }
         }
     }
-
     return 0;
 }
-

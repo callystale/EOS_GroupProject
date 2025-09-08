@@ -164,22 +164,16 @@ int show_main_menu() {
                     uart_puts("\r\n[MENU] Start Game selected\r\n");
                     in_menu = 0;      // Menu exit → go to the the next step(Game)
                     return 0;
-                    break;
                 case 1: // Options
                     uart_puts("\r\n[MENU] Characters selected\r\n");
-                    // TODO: Options screeen (it can be Character Selection)
-                    return 1;
-                    break;
+                     // TODO: Options screeen (it can be Character Selection)
                 case 2: // Credits
                     uart_puts("\r\n[MENU] Credits selected\r\n");
                     // TODO: Credits screen (if not needed, please get rid of it)
-                    return 2;
-                    break;
                 case 3: // Exit
                     uart_puts("\r\n[MENU] Exit selected\r\n");
                     in_menu = 0;
                     return 3;
-                    break;
             }
         }
         // Ignore the others

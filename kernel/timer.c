@@ -44,6 +44,13 @@ unsigned int get_remaining_time_ms() {
     return (unsigned int)(remaining_ticks * 1000 / f);
 }
 
+// Function to reset timer
+// Reset the timer back to a given duration (ms)
+void reset_shooting_timer(unsigned int msVal) {
+    set_shooting_timer(msVal);  // simply call the original function
+}
+
+
 // Simple integer to string conversion
 void intToStr(unsigned int num, char *str) {
     char buf[12];

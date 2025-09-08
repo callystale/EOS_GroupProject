@@ -227,7 +227,7 @@ void run_command(char *input) {
     }
     else if(strcmp(cmd, "task3") == 0){
         clear_screen();
-        task3_sidescroller();
+        game();
     }
     else if (cmd[0] == '\0') {
         // empty input → do nothing

@@ -300,41 +300,39 @@ int isCollidingWithEnemy(int next_x, int player_y, Enemy *enemy) {
              player_bottom < enemy_top || player_top > enemy_bottom);
 }
 
-void showCountdown() {
+void drawCountdownOnScreen(int camera_x) {
     unsigned int remaining = get_remaining_time_ms();
     unsigned int seconds = remaining / 1000;
     unsigned int tenths = (remaining % 1000) / 100;
-    
+
+    // Build timer string
     char buf[50];
     char *p = buf;
-
-    // "Shoot in: "
-    p = strcopy(p, "Shoot in: ");
-
-    // seconds
+    p = strcopy(p, "Time left: ");
+    
     char secStr[10];
     intToStr(seconds, secStr);
     p = strcopy(p, secStr);
 
-    // decimal point
     *p++ = '.';
 
-    // tenths
     char tenthsStr[10];
     intToStr(tenths, tenthsStr);
     p = strcopy(p, tenthsStr);
 
-    // " sec"
     p = strcopy(p, " sec");
     *p = '\0';
 
-    uart_puts(buf);
-    uart_puts("\r\n");
+    // Draw background to clear old text
+    clearRectWithBackground(10, 10, 250, 20, camera_x);
+
+    // Draw the new timer text on top
+    drawString(10, 10, buf, 0xFFFFFFFF, 2);  // white text, scale 2
 }
 
 
 
-void task3_sidescroller() {
+int task3_sidescroller(int timer_value) {
     int camera_x = 0;
     int player_x = 50;
     int player_y = 250;
@@ -345,6 +343,9 @@ void task3_sidescroller() {
     int next_enemy_spawn_x = 300;  // first spawn after 350px
     int enemy_type = 0; // default to first enemy sprite
     int hp_increment = 5; // HP increase per enemy
+    int timer_active = 0;
+    int restart = 0;
+    int lost = 0;
     
 
     typedef struct {
@@ -378,18 +379,39 @@ void task3_sidescroller() {
     drawBullets(camera_x);
     // draw player and enemy
     drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
-    if (enemy.active) {
-        int enemy_screen_x = enemy.x - camera_x;
-        if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
-            drawEnemy(camera_x, enemy_type);
-    }
+    set_shooting_timer(timer_value); // 4 seconds to shoot
     
-
     while (1) {
-
         char c = uart_read();
         if (c == 'q') break;
 
+        // drawCountdownOnScreen(camera_x);
+        if (enemy.active) {
+            timer_active = 1;
+            int enemy_screen_x = enemy.x - camera_x;
+            if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH){
+                drawEnemy(camera_x, enemy_type);
+            }
+            drawCountdownOnScreen(camera_x);
+        } 
+        if (timer_active) {
+            if (check_shooting_timer_expired() && enemy.active) {
+                timer_active = 0;   // Stop the timer
+                uart_puts("Time up! Enemy survived!\r\n");
+                uart_puts("You lose!\r\n");
+                uart_puts("Press 't' to continue and 'q' to quit\r\n");
+                clear_screen();
+                drawImageRGBA32(lose,500,500,0,0);
+                drawString(100, 50, "Time up! You Lose!", 0xFFFFFFFF, 2);
+                drawString(100, 450, "Press 't' to try again", 0xFFFFFFFF, 2);
+                lost = 1;
+                break;
+            } else{
+                drawCountdownOnScreen(camera_x);
+            }
+            
+        }
+        
         int camera_changed = 0;
         int player_moved = 0;
         int old_camera_x = camera_x;
@@ -431,27 +453,12 @@ void task3_sidescroller() {
         }
         else if (c == 's' || c == ' ') {
             shootBullet(player_x, player_y, camera_x, 1);
-        } else if ( c == 't'){
-            set_shooting_timer(5000); // 5 seconds to shoot
-            while (!check_shooting_timer_expired()) {
-                showCountdown();
-                // Check input while timer runs
-                if (uart_char_available()) {  // Add this if not in your code yet
-                    char shootKey = uart_read();
-                    if (shootKey == 'f') {    // Press 'f' to actually shoot
-                        shootBullet(player_x, player_y, camera_x, 1);
-                        break;
-                    }
-                }
-                wait_msec(500);  // update every 0.5 sec
-            }
-            if (check_shooting_timer_expired()) {
-                uart_puts("Time up! Missed shot.\r\n");
-            }
-        }
-        // Check if player moved far enough to spawn a new enemy
+        } 
         
+        // Check if player moved far enough to spawn a new enemy
         if (!enemy.active && world_x >= next_enemy_spawn_x) {
+            
+            uart_puts("\n You have 4 seconds to shoot\r");
             uart_puts("\n New enemy appeared!\r");
             uart_puts("\n HP Level:");
             enemy.active = 1;
@@ -462,8 +469,13 @@ void task3_sidescroller() {
             enemy_type++;
             next_enemy_spawn_x = world_x + 300;  // next spawn after another 300px
             enemyClear = 0;  // reset clear counter for the new enemy
+            timer_active = 1;
+            set_shooting_timer(timer_value); // 4 seconds to shoot
             uart_puts("\r\n");
         }
+        
+
+        
 
         handleJumping(&player_y, &jumping, &jump_velocity);
         if (player_y != old_player_y) player_moved = 1;
@@ -488,8 +500,10 @@ void task3_sidescroller() {
             drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
             if (enemy.active) {
                 int enemy_screen_x = enemy.x - camera_x;
-                if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
+                if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH){
                     drawEnemy(camera_x, enemy_type);
+                    reset_shooting_timer(timer_value); // reset timer on camera move and enemy alive
+                }
             }
         } else {
             // selective redraw: clear old bullets using OLD camera, then draw new bullets
@@ -527,20 +541,72 @@ void task3_sidescroller() {
                 enemyClear++;
             }
             if (enemyClear == 1) { // make sure the clearing happens only once
-                drawString(player_x, player_y, "Enemy defeated!", 0xFFFFFFFF, 2);
                 wait_msec(1000);
                 clearRectWithBackground(enemy.x - old_camera_x, enemy.y - 20, ENEMY_WIDTH, ENEMY_HEIGHT + 20, old_camera_x);
+                drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
+                drawString(player_x, player_y, "Enemy defeated!", 0xFFFFFFFF, 2);
             }
         }
-         if(enemy_type > 4){
+
+        if(enemy_type > 4){
             // Player wins
             clear_screen();
             drawImageRGBA32(win,500,500,0,0);
             drawString(100, 50, "Congratz!! You Win!", 0xFFFFFFFF, 2);
+            drawString(100, 450, "Press 'h' to make go to level 2", 0x00, 1);
             uart_puts("You Win!\r\n");
             break;
         }
 
         wait_msec(1000); // keep your original tick; lower to ~16 for smoother
     }
+    
+    while (1) {
+        char c = uart_read();
+        if (c == 't' && lost) {
+            restart = 1;
+            break;
+        } else if (c == 'q') {
+            restart = 0;
+            break;
+        } else if (c == 'h' && !lost) {
+            restart = 2; // go to level 2
+            break;
+        }
+    }
+    
+    return restart;
+    
 }
+
+int game() {
+    int restart;
+    int increment = 1000;
+    int base_time = 5000; // start with 5 seconds
+    int max_time = 1000;
+
+    while (1) {
+        restart = task3_sidescroller(base_time);
+
+        if (restart == 1) {
+            // 't' pressed -> restart same level
+            continue;
+        } 
+        else if (restart == 2) {
+            // 'h' pressed -> next level
+            if (base_time - increment >= max_time) {
+                base_time -= increment;  // decrease time for next level
+            } else {
+                uart_puts("Maximum difficulty reached!\r\n");
+            }
+            
+            continue;
+        } 
+        else {
+            break;  // 'q' pressed -> quit
+        }
+    }
+
+    return 0;
+}
+

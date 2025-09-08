@@ -329,7 +329,7 @@ void wait_msec(unsigned int n)
 void clear_screen() {
     for (int y = 0; y < 500; y++) {
         for (int x = 0; x < 500; x++) {
-            drawPixelARGB32(x, y, 0x0);
+            drawPixelRGBA32(x, y, 0, 0, 0, 0);
         }
     }
     uart_puts("Screen cleared.\r\n");

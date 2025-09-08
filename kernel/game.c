@@ -554,9 +554,9 @@ int task3_sidescroller(int timer_value) {
             clear_screen();
             drawImageRGBA32(win,500,500,0,0);
             drawString(100, 50, "Congratz!! You Win!", 0xFFFFFFFF, 2);
-            drawString(100, 450, "Press 'h' to make go to level 2", 0x00, 1);
+            drawString(100, 450, "Press 'h' to make go to a new level", 0x00, 1);
             uart_puts("You Win!\r\n");
-            uart_puts("Press 'h' to go to level 2 or 'q' to quit\r\n");
+            uart_puts("Press 'h' to go to a new level or 'q' to quit\r\n");
             break;
         }
 
@@ -572,7 +572,7 @@ int task3_sidescroller(int timer_value) {
             restart = 0;
             break;
         } else if (c == 'h' && !lost) {
-            restart = 2; // go to level 2
+            restart = 2; // go to a new level
             break;
         }
     }

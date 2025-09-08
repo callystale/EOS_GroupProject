@@ -5,6 +5,7 @@
 #include "../assets/background.h"
 #include  "video_player.h"
 #include "game.h"
+#include "menu.h"
 
 #define FONT_HEIGHT 8
 #define SYS_CLOCK 250000000
@@ -284,7 +285,7 @@ void run_command(char *input) {
     }
     else if(strcmp(cmd, "task3") == 0){
         clear_screen();
-        game();
+        show_main_menu();
     }
     else if (cmd[0] == '\0') {
         // empty input → do nothing

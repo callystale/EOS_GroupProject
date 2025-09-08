@@ -334,3 +334,51 @@ void clear_screen() {
     }
     uart_puts("Screen cleared.\r\n");
 }
+
+// No header for strlen
+int str_len(const char *s)
+{
+    int n = 0;
+    if (!s)
+        return 0;
+    while (s[n])
+        n++;
+    return n;
+}
+// Fill the title
+void fillRect(int x, int y, int w, int h, unsigned int argb)
+{
+    if (w <= 0 || h <= 0)
+        return;
+    int x2 = x + w, y2 = y + h;
+    if (x < 0)
+        x = 0;
+    if (y < 0)
+        y = 0;
+    if ((unsigned)x2 > width)
+        x2 = width;
+    if ((unsigned)y2 > height)
+        y2 = height;
+    for (int j = y; j < y2; j++)
+        for (int i = x; i < x2; i++)
+            drawPixelARGB32(i, j, argb);
+}
+
+// Top title of the game(You can modify the colour)
+void render_title_top(const char *title)
+{
+    if (!title)
+        return;
+    int Z = 2;                                              // Letter size
+    int text_px_w = (int)str_len(title) * (FONT_WIDTH * Z); // :contentReference[oaicite:5]{index=5}
+    int x = (int)width / 2 - text_px_w / 2;
+    int y = 18; // the blank of the top
+
+    // Background bar
+    fillRect(0, 8, width, (FONT_HEIGHT * Z) + 14, 0xFFEFEFEF); //   :contentReference[oaicite:6]{index=6}
+
+    // Shadow
+    drawString(x + 2, y + 2, (char *)title, 0x80000000, Z); //   :contentReference[oaicite:7]{index=7}
+    // In-game text
+    drawString(x, y, (char *)title, 0xFF222222, Z); //         :contentReference[oaicite:8]{index=8}
+}

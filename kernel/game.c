@@ -331,7 +331,75 @@ void drawCountdownOnScreen(int camera_x) {
     drawString(10, 10, buf, 0xFFFFFFFF, 2);  // white text, scale 2
 }
 
-
+int show_new_level_screen(int level, int timer_value, char message[]) {
+    clear_screen();
+    
+    // Draw level screen
+    fillRect(0, 0, width, height, 0xFF2E3440); // Dark background
+    
+    drawString(width/2 - 100, 100, message, 0xFFFFD700, 3);
+    
+    // Convert level number to string
+    char level_text[20] = "Level ";
+    char level_num[10];
+    intToStr(level, level_num);
+    // Simple string concatenation (you might need to implement strcat)
+    int pos = 6; // length of "Level "
+    for(int i = 0; level_num[i] != '\0'; i++) {
+        level_text[pos++] = level_num[i];
+    }
+    level_text[pos] = '\0';
+    
+    drawString(width/2 - 80, 180, level_text, 0xFFFFFFFF, 2);
+    
+    // Convert timer value to string
+    char timer_text[30] = "Timer: ";
+    char timer_num[10];
+    intToStr(timer_value, timer_num);
+    pos = 7; // length of "Timer: "
+    for(int i = 0; timer_num[i] != '\0'; i++) {
+        timer_text[pos++] = timer_num[i];
+    }
+    // Add " ms"
+    timer_text[pos++] = ' ';
+    timer_text[pos++] = 'm';
+    timer_text[pos++] = 's';
+    timer_text[pos] = '\0';
+    
+    drawString(width/2 - 100, 220, timer_text, 0xFFFFFFFF, 2);
+    
+    if(level > 1){
+         drawString(width/2 - 120, 260, "Enemies are stronger!", 0xFFFF6B6B, 2);
+    drawString(width/2 - 120, 300, "Less time to shoot!", 0xFFFF6B6B, 2);
+    }
+   
+    drawString(width/2 - 140, 380, "Press any key to start", 0xFF88C999, 2);
+    
+    uart_puts("Press any key to continue\r\n");
+    
+    char c = uart_getc(); // Wait for any key press
+    if (c == 'q') {
+        return 0; // User wants to quit
+    }
+    
+    // Simple countdown
+    clear_screen();
+    drawString(width/2 - 10, height/2, "3", 0xFFFFFFFF, 4);
+    wait_msec(1000);
+    
+    clear_screen();
+    drawString(width/2 - 10, height/2, "2", 0xFFFFFFFF, 4);
+    wait_msec(1000);
+    
+    clear_screen();
+    drawString(width/2 - 10, height/2, "1", 0xFFFFFFFF, 4);
+    wait_msec(1000);
+    
+    clear_screen();
+    drawString(width/2 - 30, height/2, "GO!", 0xFF88C999, 4);
+    wait_msec(500);
+    return -1; // Continue game
+}
 
 int task3_sidescroller(int timer_value) {
     int camera_x = 0;
@@ -458,8 +526,9 @@ int task3_sidescroller(int timer_value) {
         
         // Check if player moved far enough to spawn a new enemy
         if (!enemy.active && world_x >= next_enemy_spawn_x) {
-            
-            uart_puts("\n You have 4 seconds to shoot\r");
+            uart_puts("\n You have  ");
+            uart_dec(timer_value /1000);
+            uart_puts(" seconds to shoot!\r");
             uart_puts("\n New enemy appeared!\r");
             uart_puts("\n HP Level:");
             enemy.active = 1;
@@ -554,7 +623,7 @@ int task3_sidescroller(int timer_value) {
             clear_screen();
             drawImageRGBA32(win,500,500,0,0);
             drawString(100, 50, "Congratz!! You Win!", 0xFFFFFFFF, 2);
-            drawString(100, 450, "Press 'h' to make go to a new level", 0x00, 1);
+            drawString(75, 450, "Press 'h' to go to a new level", 0x00, 1);
             uart_puts("You Win!\r\n");
             uart_puts("Press 'h' to go to a new level or 'q' to quit\r\n");
             break;
@@ -573,6 +642,8 @@ int task3_sidescroller(int timer_value) {
             break;
         } else if (c == 'h' && !lost) {
             restart = 2; // go to a new level
+            clear_screen();
+            drawString(100, 50, "Loading next level...", 0xFFFFFFFF, 2);
             break;
         }
     }
@@ -587,9 +658,17 @@ int game() {
     int base_time = 5000; // start with 5 seconds
     int max_time = 1000;
     int track = show_main_menu();
+    int level = 1;
     
     if(track == 0){
+        int user_choice = show_new_level_screen(level, base_time, "GUNNY GAME");
         while (1) {
+            if(user_choice == 0){
+                // User chose to quit from level screen
+                clear_screen();
+                uart_puts("Exiting game...\r\n");
+                break;
+            }
             restart = task3_sidescroller(base_time);
             if (restart == 1) {
                 // 't' pressed -> restart same level
@@ -597,11 +676,12 @@ int game() {
             }
             else if (restart == 2) {
                 // 'h' pressed -> next level
+                level++;
                 if (base_time - increment >= max_time) {
                     base_time -= increment; // decrease time for next level
-                } else {
-                    uart_puts("Maximum difficulty reached!\r\n");
-                }
+                    uart_puts("Timer minus 1000 ms\r\n");
+                    user_choice = show_new_level_screen(level, base_time, "Level up!");
+                } 
                 continue;
             }
             else {

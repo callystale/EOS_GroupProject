@@ -7,6 +7,7 @@
 #include "game.h"
 
 #define FONT_HEIGHT 8
+#define SYS_CLOCK 250000000
 
 typedef struct {
     const char *name;
@@ -198,6 +199,41 @@ void task_2a_display_names()
 
 }
 
+int atoi(const char *str)
+{
+    int res = 0, sign = 1;
+    if (*str == '-')
+    {
+        sign = -1;
+        str++;
+    }
+    while (*str >= '0' && *str <= '9')
+    {
+        res = res * 10 + (*str - '0');
+        str++;
+    }
+    return res * sign;
+}
+
+void set_baudrate(unsigned int baudrate) {
+    unsigned int baud_reg = (SYS_CLOCK / (8 * baudrate)) - 1;
+    AUX_MU_BAUD = baud_reg;   // no need for *
+}
+
+void set_handshake(int enable) {
+    unsigned int val = AUX_MU_CNTL;  // read register
+
+    if (enable) {
+        val |= (1 << 2);   // Enable RTS auto-flow
+    } else {
+        val &= ~(1 << 2);  // Disable RTS auto-flow
+    }
+
+    AUX_MU_CNTL = val;     // write back to register
+}
+
+
+
 void run_command(char *input) {
     char cmd[32];
     char arg[32];
@@ -216,6 +252,27 @@ void run_command(char *input) {
     }
     else if(strcmp(cmd, "showinfo") == 0){
         get_board_info();
+    }
+    else if(strcmp(cmd, "baudrate") == 0){
+        if (arg[0] != '\0') {
+            unsigned int baud = atoi(arg);   // convert argument to int
+            set_baudrate(baud);
+            uart_puts("Baudrate set to ");
+            uart_dec(baud);
+            uart_puts("\r\n");
+        } else {
+            uart_puts("Usage: baudrate <value>\r\n");
+        }
+    }
+    else if(strcmp(cmd, "handshake") == 0){
+        if (arg[0] != '\0') {
+            int enable = atoi(arg);   // 0 = disable, nonzero = enable
+            set_handshake(enable);
+            uart_puts("Handshake ");
+            uart_puts(enable ? "enabled\r\n" : "disabled\r\n");
+        } else {
+            uart_puts("Usage: handshake <0|1>\r\n");
+        }
     }
     else if(strcmp(cmd, "task2a") == 0){
         clear_screen();

@@ -116,92 +116,24 @@ void drawPixelARGB32(int x, int y, unsigned int attr)
 	*((unsigned int*)(fb + offs)) = attr;
 }
 
-
-void drawRectARGB32(int x1, int y1, int x2, int y2, unsigned int attr, int fill)
+//Function to draw healthbar
+void drawHealthBar(int x1, int y1, int x2, int y2, unsigned int borderColor, unsigned int fillColor, int fill)
 {
-	for (int y = y1; y <= y2; y++ )
-		for (int x = x1; x <= x2; x++) {
-			if ((x == x1 || x == x2) || (y == y1 || y == y2))
-				drawPixelARGB32(x, y, attr);
-			else if (fill)
-				drawPixelARGB32(x, y, attr);
-		}
-}
-
-
-
-
-// Function to draw line
-void drawLine(int x1, int y1, int x2, int y2, unsigned int attr)
-{
-	for (int x = x1; x <= x2; x++ ){
-        int y = (float)(y1 - y2)/(x1 - x2)*(x - x1) + y1;
-        drawPixelARGB32(x, y, attr);
-    }
-}
-
-
-// Function to calculate the square root of a number using the Newton-Raphson method
-double sqrt(double number) {
-    if (number < 0) {
-        return -1; // Return -1 for negative inputs as square root of negative is not defined in real numbers
-    }
-    
-    double tolerance = 0.000001; // Define the tolerance for the result
-    double guess = number / 2.0; // Initial guess (can be any positive number, here half of the number)
-    double result = 0.0;
-    
-    while (1) {
-        result = 0.5 * (guess + number / guess); // Calculate the next approximation
-        
-        // Check if the difference between the current guess and the new result is within the tolerance
-        int diff = (result > guess) ? (result - guess) : (guess - result);
-        if (diff < tolerance) {
-            break;
-        }
-        
-        guess = result; // Update the guess for the next iteration
-    }
-    
-    return result;
-}
-
-
-// Function to draw circle
-void drawLCircle(int center_x, int center_y, int radius, unsigned int attr, int fill)
-{
-    //Draw the circle when going on x side
-    for (int x = center_x - radius; x <= center_x + radius; x++) {
-        // Calculate the corresponding y values using the circle equation
-        int dy = sqrt(radius * radius - (x - center_x) * (x - center_x)); 
-        int upper_y = center_y + dy;
-        int lower_y = center_y - dy;
-
-        drawPixelARGB32(x, upper_y, attr);
-        drawPixelARGB32(x, lower_y, attr);
-
-        // Fill the circle, draw a line between lower_y and upper_y
-        if (fill) {
-            for (int y = lower_y; y <= upper_y; y++) {
-                drawPixelARGB32(x, y, attr);
+    for(int y = y1; y <= y2; y++){
+        for(int x = x1; x <= x2; x++){
+            //Draw border
+            if((x <= x1 + 1 || x >= x2 - 1) || (y <= y1 + 1 || y >= y2 - 1)){
+                drawPixelARGB32(x, y, borderColor);
+            } else if(fill){
+                //Gradient effect for fill
+                unsigned int gradient = fillColor + ((y - y1) * 0x00200000);
+                drawPixelARGB32(x, y, gradient);
             }
         }
     }
-
-    /* Also draw the circle border when going on y side (
-    since some points may be missing due to inaccurate calculation above) */
-
-    for (int y = center_y - radius; y <= center_y + radius; y++) {
-        // Calculate the corresponding x values using the circle equation
-        int dx = sqrt(radius * radius - (y - center_y) * (y - center_y)); 
-
-        int left_x = center_x - dx;
-        int right_x = center_x + dx;
-
-        drawPixelARGB32(left_x, y, attr);
-        drawPixelARGB32(right_x, y, attr);
-    }
 }
+
+
 
 
 

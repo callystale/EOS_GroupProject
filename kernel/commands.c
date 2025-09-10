@@ -5,6 +5,9 @@
 #include "../assets/background.h"
 #include  "video_player.h"
 #include "game.h"
+// Add these to commands.h or at the top of commands.c
+#define TAB_KEY 0x09
+#define MAX_MATCHES 10
 
 
 #define FONT_HEIGHT 8
@@ -50,10 +53,22 @@ Command commands[] = {
         "Example:\r\n  OkkOS> handshake"
     },
     {
-        "task",
-        "task<number>",
-        "\n task2a: Display names of all members and image \n task2b: Display names of all members and image \n task3: Run a small game\n"
-        "Example:\r\n  OkkOS> task2"
+        "task2a",
+        "task2a",
+        "Display names of all members and image.\r\n"
+        "Example:\r\n  OkkOS> task2a"
+    },
+    {
+        "task2b",
+        "task2b", 
+        "Display names of all members and image with video.\r\n"
+        "Example:\r\n  OkkOS> task2b"
+    },
+    {
+        "task3",
+        "task3",
+        "Run a small game.\r\n"
+        "Example:\r\n  OkkOS> task3"
     }
 };
 
@@ -290,3 +305,131 @@ int run_command(char *input) {
     return handshake;
 }
 
+
+// Find completions for the current input
+int find_completions(char* input, char matches[][32]) {
+    int match_count = 0;
+    int input_len = strlen(input);
+    
+    // Find all commands that start with the input
+    for (int i = 0; i < command_count && match_count < MAX_MATCHES; i++) {
+        int matches_prefix = 1;
+        
+        // Check if command starts with input
+        for (int j = 0; j < input_len; j++) {
+            if (commands[i].name[j] != input[j]) {
+                matches_prefix = 0;
+                break;
+            }
+        }
+        
+        if (matches_prefix) {
+            // Copy matching command to matches array
+            int k = 0;
+            while (commands[i].name[k] != '\0' && k < 31) {
+                matches[match_count][k] = commands[i].name[k];
+                k++;
+            }
+            matches[match_count][k] = '\0';
+            match_count++;
+        }
+    }
+    
+    return match_count;
+}
+
+// Find the longest common prefix among matches
+int find_common_prefix(char matches[][32], int count) {
+    if (count == 0) return 0;
+    if (count == 1) return strlen(matches[0]);
+    
+    int prefix_len = 0;
+    
+    while (1) {
+        char first_char = matches[0][prefix_len];
+        if (first_char == '\0') break;
+        
+        // Check if all matches have the same character at this position
+        for (int i = 1; i < count; i++) {
+            if (matches[i][prefix_len] != first_char || matches[i][prefix_len] == '\0') {
+                return prefix_len;
+            }
+        }
+        prefix_len++;
+    }
+    
+    return prefix_len;
+}
+
+// Handle TAB key press for auto-completion
+void handle_tab_completion(char* buffer, int* index) {
+    char matches[MAX_MATCHES][32];
+    int match_count = find_completions(buffer, matches);
+    
+    if (match_count == 0) {
+        // No matches found - do nothing
+        return;
+    }
+    
+    if (match_count == 1) {
+        // Exactly one match - complete it
+        int current_len = *index;
+        int completion_len = strlen(matches[0]);
+        
+        // Clear current input on screen
+        for (int i = 0; i < current_len; i++) {
+            uart_puts("\b \b");
+        }
+        
+        // Copy completion to buffer
+        for (int i = 0; i < completion_len; i++) {
+            buffer[i] = matches[0][i];
+        }
+        buffer[completion_len] = ' ';  // Add space after command
+        buffer[completion_len + 1] = '\0';
+        *index = completion_len + 1;
+        
+        // Display the completed command
+        uart_puts(matches[0]);
+        uart_puts(" ");
+    } else {
+        // Multiple matches - ask user which one they mean
+        int common_len = find_common_prefix(matches, match_count);
+        int current_len = *index;
+        
+        // If common prefix is longer than current input, complete to common prefix
+        if (common_len > current_len) {
+            // Clear current input
+            for (int i = 0; i < current_len; i++) {
+                uart_puts("\b \b");
+            }
+            
+            // Show common prefix
+            for (int i = 0; i < common_len; i++) {
+                buffer[i] = matches[0][i];
+                uart_sendc(matches[0][i]);
+            }
+            buffer[common_len] = '\0';
+            *index = common_len;
+        } else {
+            // Ask user which command they mean
+            uart_puts("\r\nDid you mean: ");
+            
+            for (int i = 0; i < match_count; i++) {
+                uart_puts(matches[i]);
+                if (i < match_count - 2) {
+                    uart_puts(", ");
+                } else if (i == match_count - 2) {
+                    uart_puts(" or ");
+                }
+            }
+            uart_puts("?\r\n");
+            
+            // Redisplay prompt and current input
+            uart_puts("OkkOS> ");
+            for (int i = 0; i < *index; i++) {
+                uart_sendc(buffer[i]);
+            }
+        }
+    }
+}

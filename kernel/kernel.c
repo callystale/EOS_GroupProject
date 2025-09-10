@@ -4,6 +4,7 @@
 #include "commands.h"
 #include "video_bitmap.h"
 #include "video_player.h"
+#define TAB_KEY 0x09
 
 #define WELCOME_MSG \
 " ####### ####### ####### #######  #####  #        #####    ###      \n" \
@@ -62,6 +63,8 @@ void main()
     char buffer[128];
     int index = 0;
 
+    // Replace the while(1) loop in your main() function with this:
+
     while (1) {
         char c = uart_getc();
 
@@ -75,12 +78,16 @@ void main()
                 uart_puts("Enabling handshake in UART setting\r\n");
             } else {
                 uart_init(0); // reinitialize UART without handshake
-                uart_puts("Disabling handshake in UART setting\r\n");
             }
             index = 0;
             // reprint prompt immediately
             uart_puts("OkkOS> ");
-        } 
+        }
+        else if (c == TAB_KEY) {
+            // Handle TAB completion
+            buffer[index] = '\0';  // Null terminate for completion
+            handle_tab_completion(buffer, &index);
+        }
         else if (c == 127 || c == '\b') {
             // handle backspace
             if (index > 0) {

@@ -25,9 +25,9 @@
 "                                                                    \n" \
 "- Developed by Group 2\n" \
 "  Members:\n" \
-"    - s3993986  Hồng Thiệu Kiệt\n" \
-"    - s3978567  Lê Phương Ngân\n" \
-"    - s3990627  Nguyễn Hoàng Sơn\n" \
+"    - s3993986  Hong Thieu Kiet\n" \
+"    - s3978567  Le Phuong Ngan\n" \
+"    - s3990627  Nguyen Hoang Son\n" \
 "    - s3878104  Lee Dohwan \n" \
 "    - s3924763  Huynh Nhat Anh\n"
 

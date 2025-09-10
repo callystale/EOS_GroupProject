@@ -25,12 +25,26 @@ void uart_init()
     r |= (0b010 << 12)|(0b010 << 15);   //set value 0b010 (select ALT5: TXD1/RXD1)
     GPFSEL1 = r;
 
+    /* map UART1 to GPIO pins 16 and 17 */
+    r = GPFSEL1;
+    r &=  ~( (7 << 18)|(7 << 21) ); //clear bits 17-12 (FSEL15, FSEL14)
+    r |= (0b010 << 18)|(0b010 << 21);   //set value 0b010 (select ALT5: TXD1/RXD1)
+    GPFSEL1 = r;
+
+
 	/* enable GPIO 14, 15 */
 #ifdef RPI3 //RPI3
 	GPPUD = 0;            //No pull up/down control
 	//Toogle clock to flush GPIO setup
 	r = 150; while(r--) { asm volatile("nop"); } //waiting 150 cycles
 	GPPUDCLK0 = (1 << 14)|(1 << 15); //enable clock for GPIO 14, 15
+	r = 150; while(r--) { asm volatile("nop"); } //waiting 150 cycles
+	GPPUDCLK0 = 0;        // flush GPIO setup
+
+    GPPUD = 0;            //No pull up/down control
+	//Toogle clock to flush GPIO setup
+	r = 150; while(r--) { asm volatile("nop"); } //waiting 150 cycles
+	GPPUDCLK0 = (1 << 16)|(1 << 17); //enable clock for GPIO 16, 17
 	r = 150; while(r--) { asm volatile("nop"); } //waiting 150 cycles
 	GPPUDCLK0 = 0;        // flush GPIO setup
 

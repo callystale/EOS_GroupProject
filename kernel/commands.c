@@ -225,8 +225,8 @@ void set_handshake(int enable) {
     unsigned int val = AUX_MU_CNTL;  // read register
 
     if (enable) {
-        val |= (1 << 3);   //  Load 1 to CTS, uable CTS
-        val |= (1 << 2);    //  Load 1 to RTS, uable RTS
+        val |= (1 << 3);   //  Load 1 to CTS, unable CTS
+        val |= (1 << 2);    //  Load 1 to RTS, unable RTS
     } else {
         val &= ~(1 << 3);  // Disable CTS auto-flow
          val &= ~(1 << 2);  // Disable RTS auto-flow

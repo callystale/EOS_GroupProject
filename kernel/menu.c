@@ -167,11 +167,14 @@ int show_main_menu() {
                 case 1: // Options
                     uart_puts("\r\n[MENU] Characters selected\r\n");
                      // TODO: Options screeen (it can be Character Selection)
+                    break;
                 case 2: // Credits
                     uart_puts("\r\n[MENU] Credits selected\r\n");
                     // TODO: Credits screen (if not needed, please get rid of it)
+                    break;
                 case 3: // Exit
                     uart_puts("\r\n[MENU] Exit selected\r\n");
+                    clear_screen();
                     in_menu = 0;
                     return 3;
             }

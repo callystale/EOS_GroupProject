@@ -225,9 +225,11 @@ void set_handshake(int enable) {
     unsigned int val = AUX_MU_CNTL;  // read register
 
     if (enable) {
-        val |= (1 << 2);   // Enable RTS auto-flow
+        val |= (1 << 3);   //  Load 1 to CTS, uable CTS
+        val |= (1 << 2);    //  Load 1 to RTS, uable RTS
     } else {
-        val &= ~(1 << 2);  // Disable RTS auto-flow
+        val &= ~(1 << 3);  // Disable CTS auto-flow
+         val &= ~(1 << 2);  // Disable RTS auto-flow
     }
 
     AUX_MU_CNTL = val;     // write back to register

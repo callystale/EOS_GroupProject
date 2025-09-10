@@ -4,7 +4,10 @@
 #include "commands.h"
 #include "video_bitmap.h"
 #include "video_player.h"
+
 #define TAB_KEY 0x09
+#define UP_KEY '_'
+#define DOWN_KEY '+'
 
 #define WELCOME_MSG \
 " ####### ####### ####### #######  #####  #        #####    ###      \n" \
@@ -63,6 +66,7 @@ void main()
     char buffer[128];
     int index = 0;
 
+
     // Replace the while(1) loop in your main() function with this:
 
     while (1) {
@@ -71,8 +75,9 @@ void main()
         if (c == '\r' || c == '\n') {
             // Enter pressed → end command
             uart_puts("\r\n");
-
             buffer[index] = '\0';   // terminate string
+            // Add command to history here
+            add_to_history(buffer);
             if(run_command(buffer) == 1){
                 uart_init(1); // reinitialize UART with handshake enabled
                 uart_puts("Enabling handshake in UART setting\r\n");
@@ -87,6 +92,11 @@ void main()
             // Handle TAB completion
             buffer[index] = '\0';  // Null terminate for completion
             handle_tab_completion(buffer, &index);
+        }
+        else if (c == UP_KEY || c == DOWN_KEY) {
+        // Handle history navigation
+            handle_history_navigation(c, buffer, &index);
+            //uart_puts("[DEBUG]UP and DOWN key pressed\r\n");
         }
         else if (c == 127 || c == '\b') {
             // handle backspace

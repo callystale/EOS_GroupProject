@@ -5,13 +5,15 @@
 #include "../assets/background.h"
 #include  "video_player.h"
 #include "game.h"
-// Add these to commands.h or at the top of commands.c
-#define TAB_KEY 0x09
-#define MAX_MATCHES 10
-
 
 #define FONT_HEIGHT 8
 #define SYS_CLOCK 250000000
+#define TAB_KEY 0x09
+#define MAX_MATCHES 10
+#define HISTORY_SIZE 10
+#define MAX_CMD_LEN 128
+#define UP_KEY '_'
+#define DOWN_KEY '+'
 
 typedef struct {
     const char *name;
@@ -74,6 +76,16 @@ Command commands[] = {
 
 int command_count = sizeof(commands) / sizeof(commands[0]);
 
+
+// Simple string copy function (if you don't have strcpy)
+void strcpy(char* dest, const char* src) {
+    int i = 0;
+    while (src[i] != '\0') {
+        dest[i] = src[i];
+        i++;
+    }
+    dest[i] = '\0';
+}
 
 int strcmp(const char *s1, const char *s2) {
     while (*s1 && (*s1 == *s2)) {
@@ -290,8 +302,10 @@ int run_command(char *input) {
     }
     else if(strcmp(cmd, "task3") == 0){
         clear_screen();
-        game();
-        
+        game();   
+    }
+    else if(strcmp(cmd, "history") == 0){
+        show_history();
     }
     else if (cmd[0] == '\0') {
         // empty input → do nothing
@@ -431,5 +445,161 @@ void handle_tab_completion(char* buffer, int* index) {
                 uart_sendc(buffer[i]);
             }
         }
+    }
+}
+
+// Global variables for command history
+static char command_history[HISTORY_SIZE][MAX_CMD_LEN];
+static int history_write_index = 0;  // Where to write next command
+static int history_count = 0;        // Total commands stored
+static int history_browse_index = -1; // Current position when browsing (-1 = not browsing)
+
+// Replace your add_to_history function with this debug version:
+void add_to_history(const char* command) {
+    uart_puts("[DEBUG] Adding to history: '");
+    uart_puts(command);
+    uart_puts("', length: ");
+    uart_dec(strlen(command));
+    uart_puts("\r\n");
+    
+    // Skip empty commands
+    if (strlen(command) == 0) {
+        uart_puts("[DEBUG] Skipping empty command\r\n");
+        return;
+    }
+    
+    // Don't add if same as last command
+    if (history_count > 0) {
+        int last_index = (history_write_index - 1 + HISTORY_SIZE) % HISTORY_SIZE;
+        uart_puts("[DEBUG] Comparing with last command: '");
+        uart_puts(command_history[last_index]);
+        uart_puts("'\r\n");
+        
+        if (strcmp(command_history[last_index], command) == 0) {
+            uart_puts("[DEBUG] Skipping duplicate command\r\n");
+            return;
+        }
+    }
+    
+    // Add command to history
+    int len = strlen(command);
+    if (len >= MAX_CMD_LEN) len = MAX_CMD_LEN - 1;
+    
+    uart_puts("[DEBUG] Adding command at index ");
+    uart_dec(history_write_index);
+    uart_puts("\r\n");
+    
+    for (int i = 0; i < len; i++) {
+        command_history[history_write_index][i] = command[i];
+    }
+    command_history[history_write_index][len] = '\0';
+    
+    history_write_index = (history_write_index + 1) % HISTORY_SIZE;
+    if (history_count < HISTORY_SIZE) {
+        history_count++;
+    }
+    
+    uart_puts("[DEBUG] History count now: ");
+    uart_dec(history_count);
+    uart_puts("\r\n");
+    
+    // Reset browse index
+    history_browse_index = -1;
+}
+
+int browse_history(int direction, char* result_buffer) {
+    if (history_count == 0) {
+        return 0; // No history
+    }
+    
+    if (history_browse_index == -1) {
+        // Start browsing from the most recent command
+        if (direction == -1) { // UP/previous
+            history_browse_index = (history_write_index - 1 + HISTORY_SIZE) % HISTORY_SIZE;
+            strcpy(result_buffer, command_history[history_browse_index]);
+            return 1;
+        } else {
+            return 0; // Can't go forward from current position
+        }
+    } else {
+        // Already browsing
+        if (direction == -1) { // UP/previous (older commands)
+            int next_index = (history_browse_index - 1 + HISTORY_SIZE) % HISTORY_SIZE;
+            
+            // Check if we've reached the oldest command
+            int oldest_index = (history_write_index - history_count + HISTORY_SIZE) % HISTORY_SIZE;
+            if (history_browse_index == oldest_index) {
+                return 0; // Already at oldest
+            }
+            
+            history_browse_index = next_index;
+            strcpy(result_buffer, command_history[history_browse_index]);
+            return 1;
+        } else { // DOWN/next (newer commands)
+            int next_index = (history_browse_index + 1) % HISTORY_SIZE;
+            
+            // Check if we've reached the newest command
+            int newest_index = (history_write_index - 1 + HISTORY_SIZE) % HISTORY_SIZE;
+            if (history_browse_index == newest_index) {
+                history_browse_index = -1; // Reset to "current" position
+                result_buffer[0] = '\0'; // Empty string
+                return 2; // Signal to clear input
+            }
+            
+            history_browse_index = next_index;
+            strcpy(result_buffer, command_history[history_browse_index]);
+            return 1;
+        }
+    }
+}
+
+// Handle history navigation
+void handle_history_navigation(char key, char* buffer, int* index) {
+    char history_cmd[MAX_CMD_LEN];
+    int result = 0;
+    
+    if (key == UP_KEY) {
+        result = browse_history(-1, history_cmd); // Previous command
+    } else if (key == DOWN_KEY) {
+        result = browse_history(1, history_cmd);  // Next command
+    }
+    
+    if (result > 0) { // Command found or clear signal
+        // Clear current input
+        for (int i = 0; i < *index; i++) {
+            uart_puts("\b \b");
+        }
+        
+        // Copy history command to buffer
+        int len = strlen(history_cmd);
+        for (int i = 0; i < len && i < 127; i++) {
+            buffer[i] = history_cmd[i];
+        }
+        buffer[len] = '\0';
+        *index = len;
+        
+        // Display the command
+        uart_puts(history_cmd);
+    }
+}
+
+// Show command history (for debugging or as a command)
+void show_history() {
+    uart_puts("Command history:\r\n");
+    if (history_count == 0) {
+        uart_puts("  (no commands in history)\r\n");
+        return;
+    }
+    
+    // Show commands from oldest to newest
+    int start_index = (history_write_index - history_count + HISTORY_SIZE) % HISTORY_SIZE;
+    
+    for (int i = 0; i < history_count; i++) {
+        int index = (start_index + i) % HISTORY_SIZE;
+        uart_puts("  ");
+        uart_dec(i + 1);
+        uart_puts(": ");
+        uart_puts(command_history[index]);
+        uart_puts("\r\n");
     }
 }

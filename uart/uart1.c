@@ -3,7 +3,7 @@
 /**
  * Set baud rate and characteristics (115200 8N1) and map to GPIO
  */
-void uart_init()
+void uart_init( int handshake)
 {
     unsigned int r;
 
@@ -27,7 +27,7 @@ void uart_init()
 
     /* map UART1 to GPIO pins 16 and 17 */
     r = GPFSEL1;
-    r &=  ~( (7 << 18)|(7 << 21) ); //clear bits 17-12 (FSEL15, FSEL14)
+    r &=  ~( (7 << 18)|(7 << 21) ); //clear bits 18-21 (FSEL15, FSEL14)
     r |= (0b010 << 18)|(0b010 << 21);   //set value 0b010 (select ALT5: TXD1/RXD1)
     GPFSEL1 = r;
 
@@ -53,8 +53,26 @@ void uart_init()
 	r &= ~((3 << 28) | (3 << 30)); //No resistor is selected for GPIO 14, 15
 	GPIO_PUP_PDN_CNTRL_REG0 = r;
 #endif
-
+    if (handshake) {
+        set_handshake(1);  // Enable CTS/RTS handshaking
+    } else {
+        set_handshake(0);  // Disable CTS/RTS handshaking
+    }
     AUX_MU_CNTL = 3;      //enable transmitter and receiver (Tx, Rx)
+}
+
+void set_handshake(int enable) {
+    unsigned int val = AUX_MU_CNTL;  // read register
+
+    if (enable) {
+        val |= (1 << 3);   //  Load 1 to CTS, unable CTS
+        val |= (1 << 2);    //  Load 1 to RTS, unable RTS
+    } else {
+        val &= ~(1 << 3);  // Disable CTS auto-flow
+         val &= ~(1 << 2);  // Disable RTS auto-flow
+    }
+
+    AUX_MU_CNTL = val;     // write back to register
 }
 
 /**

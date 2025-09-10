@@ -1,4 +1,3 @@
-#include "../uart/uart0.h"
 #include "../uart/uart1.h"
 #include "mbox.h"
 #include "framebf.h"
@@ -35,7 +34,7 @@
 void main()
 {   
     // set up serial console
-    uart_init();
+    uart_init(0);
 
     // say hello
     uart_puts(WELCOME_MSG);
@@ -71,7 +70,13 @@ void main()
             uart_puts("\r\n");
 
             buffer[index] = '\0';   // terminate string
-            run_command(buffer);
+            if(run_command(buffer) == 1){
+                uart_init(1); // reinitialize UART with handshake enabled
+                uart_puts("Enabling handshake in UART setting\r\n");
+            } else {
+                uart_init(0); // reinitialize UART without handshake
+                uart_puts("Disabling handshake in UART setting\r\n");
+            }
             index = 0;
             // reprint prompt immediately
             uart_puts("OkkOS> ");

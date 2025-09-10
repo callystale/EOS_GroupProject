@@ -18,7 +18,8 @@
 #define AUX_MU_LSR_REG  (AUX_MU_BASE + 0x14)  // Line Status Register
 
 /* Function prototypes */
-void uart_init();
+void uart_init(int handshake);
+void set_handshake(int enable);
 void uart_sendc(char c);
 char uart_getc();
 void uart_puts( const char *s);

@@ -221,26 +221,14 @@ void set_baudrate(unsigned int baudrate) {
     AUX_MU_BAUD = baud_reg;   // no need for *
 }
 
-void set_handshake(int enable) {
-    unsigned int val = AUX_MU_CNTL;  // read register
-
-    if (enable) {
-        val |= (1 << 3);   //  Load 1 to CTS, unable CTS
-        val |= (1 << 2);    //  Load 1 to RTS, unable RTS
-    } else {
-        val &= ~(1 << 3);  // Disable CTS auto-flow
-         val &= ~(1 << 2);  // Disable RTS auto-flow
-    }
-
-    AUX_MU_CNTL = val;     // write back to register
-}
 
 
 
-void run_command(char *input) {
+int run_command(char *input) {
     char cmd[32];
     char arg[32];
     split_command(input, cmd, arg);
+    int handshake = 0;
 
     if (strcmp(cmd, "help") == 0) {
         if (arg[0] == '\0') {
@@ -270,9 +258,9 @@ void run_command(char *input) {
     else if(strcmp(cmd, "handshake") == 0){
         if (arg[0] != '\0') {
             int enable = atoi(arg);   // 0 = disable, nonzero = enable
-            set_handshake(enable);
             uart_puts("Handshake ");
             uart_puts(enable ? "enabled\r\n" : "disabled\r\n");
+            if(enable) handshake = 1;
         } else {
             uart_puts("Usage: handshake <0|1>\r\n");
         }
@@ -298,5 +286,7 @@ void run_command(char *input) {
         uart_puts(cmd);
         uart_puts("\r\n");
     }
+
+    return handshake;
 }
 

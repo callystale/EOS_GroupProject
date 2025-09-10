@@ -2,6 +2,6 @@
 #ifndef UTIL_H
 #define UTIL_H
 
-void run_command(char *buffer);
+int run_command(char *buffer);
 void task_2i_display_names();
 #endif

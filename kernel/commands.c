@@ -71,6 +71,12 @@ Command commands[] = {
         "task3",
         "Run a small game.\r\n"
         "Example:\r\n  OkkOS> task3"
+    },
+     {
+        "history",
+        "history",
+        "Show user's history of commands\r\n"
+        "Example:\r\n  OkkOS> history"
     }
 };
 

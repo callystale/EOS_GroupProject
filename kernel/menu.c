@@ -2,7 +2,7 @@
 //include "font.h"   
 #include "framebf.h"
 #include "../uart/uart1.h"
-#include "menu_background.h"
+#include "../assets/menu_background.c"
 
 
 // Function for Qemu Exit

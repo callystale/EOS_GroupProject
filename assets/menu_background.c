@@ -1,3 +1,7 @@
+#define BACKGROUND_H
+#define BACKGROUND_H
+#define BG_WIDTH 500
+#define BG_HEIGHT 500
 
 // 'Chicken_Gunny', 500x500px
 const unsigned int background_bitmap_Chicken_Gunny [] = {

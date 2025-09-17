@@ -155,7 +155,7 @@ void uart_hex(unsigned int num) {
 void uart_dec(int num)
 {
 	//A string to store the digit characters
-	char str[33] = "";
+	char str[33] = {0};
 
 	//Calculate the number of digits
 	int len = 1;

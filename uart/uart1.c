@@ -53,12 +53,14 @@ void uart_init( int handshake)
 	r &= ~((3 << 28) | (3 << 30)); //No resistor is selected for GPIO 14, 15
 	GPIO_PUP_PDN_CNTRL_REG0 = r;
 #endif
-    if (handshake) {
-        set_handshake(1);  // Enable CTS/RTS handshaking
-    } else {
-        set_handshake(0);  // Disable CTS/RTS handshaking
-    }
-    AUX_MU_CNTL = 3;      //enable transmitter and receiver (Tx, Rx)
+    // AUX_MU_CNTL = 0;
+
+    // if (handshake) {
+    //     set_handshake(1);  // Enable CTS/RTS handshaking
+    // } else {
+    //     set_handshake(0);  // Disable CTS/RTS handshaking
+    //}
+    AUX_MU_CNTL |= 3;      //enable transmitter and receiver (Tx, Rx)
 }
 
 void set_handshake(int enable) {
@@ -143,7 +145,7 @@ void uart_hex(unsigned int num) {
 void uart_dec(int num)
 {
 	//A string to store the digit characters
-	char str[33] = "";
+	char str[33] = {0};
 
 	//Calculate the number of digits
 	int len = 1;

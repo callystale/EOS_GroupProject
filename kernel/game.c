@@ -264,25 +264,6 @@ void drawBullets(int camera_x) {
 }
 
 
-void moveCharacter(int old_x, int old_y, int new_x, int new_y, 
-                  int char_width, int char_height, 
-                  const uint32_t* char_data, int camera_x) {
-    // Note: this clears using camera_x; when clearing old position after camera moved,
-    // caller should pass old_camera_x to properly restore background.
-    clearRectWithBackground(old_x, old_y, char_width, char_height, camera_x);
-    drawImageRGBA32(char_data, char_width, char_height, new_x, new_y);
-}
-
-void moveBullet(int old_x, int old_y, int new_x, int new_y, int camera_x) {
-    clearRectWithBackground(old_x, old_y, BULLET_SIZE, BULLET_SIZE, camera_x);
-    int screen_x = new_x - camera_x;
-    int screen_y = new_y;
-    if (screen_x >= 0 && screen_x < SCREEN_WIDTH - BULLET_SIZE &&
-        screen_y >= 0 && screen_y < SCREEN_HEIGHT - BULLET_SIZE) {
-        drawImageRGBA32(bullet, BULLET_SIZE, BULLET_SIZE, screen_x, screen_y);
-    }
-}
-
 int isCollidingWithEnemy(int next_x, int player_y, Enemy *enemy) {
     if (!enemy->active) return 0; // no collision if enemy is dead
 
@@ -408,7 +389,7 @@ int task3_sidescroller(int timer_value) {
     int old_player_y = player_y;
     int jumping = 0;
     int jump_velocity = 0;
-    int next_enemy_spawn_x = 300;  // first spawn after 350px
+    int next_enemy_spawn_x = 300;  // first spawn after 300px
     int enemy_type = 0; // default to first enemy sprite
     int hp_increment = 5; // HP increase per enemy
     int timer_active = 0;

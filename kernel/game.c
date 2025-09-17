@@ -343,7 +343,6 @@ int show_new_level_screen(int level, int timer_value, char message[]) {
     char level_text[20] = "Level ";
     char level_num[10];
     intToStr(level, level_num);
-    // Simple string concatenation (you might need to implement strcat)
     int pos = 6; // length of "Level "
     for(int i = 0; level_num[i] != '\0'; i++) {
         level_text[pos++] = level_num[i];

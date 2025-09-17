@@ -83,7 +83,6 @@ Command commands[] = {
 int command_count = sizeof(commands) / sizeof(commands[0]);
 
 
-// Simple string copy function (if you don't have strcpy)
 void strcpy(char* dest, const char* src) {
     int i = 0;
     while (src[i] != '\0') {

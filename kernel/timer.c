@@ -1,19 +1,16 @@
 // Add this helper function to check if timer has expired without waiting
 int is_timer_expired() {
     register unsigned long r;
-    static unsigned long expiredTime = 0;
     
-    // Get the static expiredTime from set_wait_timer by accessing it
     // We'll use a global variable instead for cleaner implementation
     asm volatile ("mrs %0, cntpct_el0" : "=r"(r));
     extern unsigned long global_timer_expire; // declare this global
     return (r >= global_timer_expire);
 }
 
-// Add this global variable at the top of your file (outside functions)
 unsigned long global_timer_expire = 0;
 
-// Modified set_wait_timer function to work with our timer checking
+// Set shooting time function
 void set_shooting_timer(unsigned int msVal) {
     register unsigned long f, t;
     // Get the current counter frequency (Hz)
@@ -24,6 +21,7 @@ void set_shooting_timer(unsigned int msVal) {
     global_timer_expire = t + f * msVal / 1000;
 }
 
+// Check for shooting time
 int check_shooting_timer_expired() {
     register unsigned long r;
     asm volatile ("mrs %0, cntpct_el0" : "=r"(r));

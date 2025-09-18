@@ -1,5 +1,4 @@
-#include "menu.h"
-//include "font.h"   
+#include "menu.h"  
 #include "framebf.h"
 #include "../uart/uart1.h"
 #include "../assets/menu_background.c"

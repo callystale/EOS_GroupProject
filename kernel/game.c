@@ -6,16 +6,16 @@
 #include "../assets/level1_map.h"
 #include "../assets/shoot_chicken.h"
 #include "../assets/bullet.h"
-#include "../assets/bee.h"  
-#include "../assets/fox.h" 
-#include "../assets/snake.h" 
-#include "../assets/box.h" 
-#include "../assets/kfc.h" 
-#include "../assets/win.h" 
-#include "../assets/lose.h" 
+#include "../assets/bee.h"
+#include "../assets/fox.h"
+#include "../assets/snake.h"
+#include "../assets/box.h"
+#include "../assets/kfc.h"
+#include "../assets/win.h"
+#include "../assets/lose.h"
 #include "menu.h"
 
-#define SCREEN_WIDTH  500
+#define SCREEN_WIDTH 500
 #define SCREEN_HEIGHT 500
 
 #define MAX_BULLETS 20
@@ -24,20 +24,52 @@
 
 // Ensure PLAYER_WIDTH/HEIGHT are set
 #ifndef PLAYER_WIDTH
-#define PLAYER_WIDTH  SHOOT_CHICKEN_WIDTH
+#define PLAYER_WIDTH SHOOT_CHICKEN_WIDTH
 #endif
 #ifndef PLAYER_HEIGHT
 #define PLAYER_HEIGHT SHOOT_CHICKEN_HEIGHT
 #endif
 
 // Enemy draw size (adjust if your bee asset uses different values)
-#define ENEMY_WIDTH  200
+#define ENEMY_WIDTH 200
 #define ENEMY_HEIGHT 200
 
+// Scoring system
+static int current_score = 0;
+static int high_score = 0;
+
+// --- Data logging counters for ACK/NAK --- //
+// --- Used during game testing and input optimization --- //
+static unsigned long g_commands_count = 0;
+static unsigned long g_nak_count = 0;
+static void log_ack(int ok)
+{
+    g_commands_count++;
+    if (ok)
+    {
+        uart_puts("ACK\r\n");
+    }
+    else
+    {
+        uart_puts("NAK\r\n");
+        g_nak_count++;
+    }
+}
+static void print_round_summary(void)
+{
+    uart_puts("[SUMMARY] Commands: ");
+    uart_dec((int)g_commands_count);
+    uart_puts("\r\n");
+    uart_puts("[SUMMARY] NAK: ");
+    uart_dec((int)g_nak_count);
+    uart_puts("\r\n");
+}
+
 // Bullet structure
-typedef struct {
-    int x;      // world x
-    int y;      // screen y
+typedef struct
+{
+    int x; // world x
+    int y; // screen y
     int active;
     int direction; // 1 for right, -1 for left
 } Bullet;
@@ -46,36 +78,54 @@ typedef struct {
 Bullet bullets[MAX_BULLETS];
 
 // Enemy structure
-typedef struct {
-    int x;      // world x
-    int y;      // screen y
+typedef struct
+{
+    int x; // world x
+    int y; // screen y
     int hp;
     int active;
     int timer;      // ms if you want
     int move_timer; // ms if you want
 } Enemy;
 
-Enemy enemy; // single enemy for now
-const uint32_t* ENEMY_SPRITES[5] = { fox, snake, box, kfc, bee }; // array of enemy sprites
+Enemy enemy;                                                    // single enemy for now
+const uint32_t *ENEMY_SPRITES[5] = {fox, snake, box, kfc, bee}; // array of enemy sprites
 
 // ---------------- Side-scroller Demo ----------------
 // clear rect from background using camera_x (world -> screen)
-void clearRectWithBackground(int x, int y, int width, int height, int camera_x) {
-    if (x < 0) { width += x; x = 0; }
-    if (y < 0) { height += y; y = 0; }
-    if (x + width > SCREEN_WIDTH) width = SCREEN_WIDTH - x;
-    if (y + height > SCREEN_HEIGHT) height = SCREEN_HEIGHT - y;
-    if (width <= 0 || height <= 0) return;
+void clearRectWithBackground(int x, int y, int width, int height, int camera_x)
+{
+    if (x < 0)
+    {
+        width += x;
+        x = 0;
+    }
+    if (y < 0)
+    {
+        height += y;
+        y = 0;
+    }
+    if (x + width > SCREEN_WIDTH)
+        width = SCREEN_WIDTH - x;
+    if (y + height > SCREEN_HEIGHT)
+        height = SCREEN_HEIGHT - y;
+    if (width <= 0 || height <= 0)
+        return;
 
-    for (int dy = 0; dy < height; dy++) {
-        for (int dx = 0; dx < width; dx++) {
+    for (int dy = 0; dy < height; dy++)
+    {
+        for (int dx = 0; dx < width; dx++)
+        {
             int screen_x = x + dx;
             int screen_y = y + dy;
             int map_x = camera_x + screen_x;
             int map_y = screen_y;
-            if (map_x < 0) map_x = 0;
-            if (map_x >= MAP_WIDTH) map_x = MAP_WIDTH - 1;
-            if (map_y < 0 || map_y >= SCREEN_HEIGHT) continue;
+            if (map_x < 0)
+                map_x = 0;
+            if (map_x >= MAP_WIDTH)
+                map_x = MAP_WIDTH - 1;
+            if (map_y < 0 || map_y >= SCREEN_HEIGHT)
+                continue;
             uint32_t pixel = level1_map[map_y * MAP_WIDTH + map_x];
             unsigned char r = (pixel >> 24) & 0xFF;
             unsigned char g = (pixel >> 16) & 0xFF;
@@ -86,13 +136,18 @@ void clearRectWithBackground(int x, int y, int width, int height, int camera_x) 
     }
 }
 
-void draw_map(int camera_x) {
-    for (int y = 0; y < SCREEN_HEIGHT; y++) {
-        for (int x = 0; x < SCREEN_WIDTH; x++) {
+void draw_map(int camera_x)
+{
+    for (int y = 0; y < SCREEN_HEIGHT; y++)
+    {
+        for (int x = 0; x < SCREEN_WIDTH; x++)
+        {
             int map_x = camera_x + x;
             int map_y = y;
-            if (map_x < 0) map_x = 0;
-            if (map_x >= MAP_WIDTH) map_x = MAP_WIDTH - 1;
+            if (map_x < 0)
+                map_x = 0;
+            if (map_x >= MAP_WIDTH)
+                map_x = MAP_WIDTH - 1;
 
             uint32_t pixel = level1_map[map_y * MAP_WIDTH + map_x];
 
@@ -106,13 +161,16 @@ void draw_map(int camera_x) {
     }
 }
 
-void handleJumping(int *player_y, int *jumping, int *jump_velocity) {
+void handleJumping(int *player_y, int *jumping, int *jump_velocity)
+{
     const int GRAVITY = 2;
     const int GROUND_Y = 250;
-    if (*jumping) {
+    if (*jumping)
+    {
         *player_y += *jump_velocity;
         *jump_velocity += GRAVITY;
-        if (*player_y >= GROUND_Y) {
+        if (*player_y >= GROUND_Y)
+        {
             *player_y = GROUND_Y;
             *jumping = 0;
             *jump_velocity = 0;
@@ -120,8 +178,10 @@ void handleJumping(int *player_y, int *jumping, int *jump_velocity) {
     }
 }
 
-void initBullets() {
-    for (int i = 0; i < MAX_BULLETS; i++) {
+void initBullets()
+{
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
         bullets[i].active = 0;
         bullets[i].x = 0;
         bullets[i].y = 0;
@@ -129,9 +189,12 @@ void initBullets() {
     }
 }
 
-void shootBullet(int player_x, int player_y, int camera_x, int facing_direction) {
-    for (int i = 0; i < MAX_BULLETS; i++) {
-        if (!bullets[i].active) {
+void shootBullet(int player_x, int player_y, int camera_x, int facing_direction)
+{
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
+        if (!bullets[i].active)
+        {
             bullets[i].active = 1;
             bullets[i].x = player_x + camera_x + (facing_direction > 0 ? PLAYER_WIDTH : 0) + 150;
             bullets[i].y = (player_y + PLAYER_HEIGHT / 3) + 50;
@@ -141,19 +204,24 @@ void shootBullet(int player_x, int player_y, int camera_x, int facing_direction)
     }
 }
 
-void updateBullets(int camera_x) {
-    for (int i = 0; i < MAX_BULLETS; i++) {
-        if (bullets[i].active) {
+void updateBullets(int camera_x, int level)
+{
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
+        if (bullets[i].active)
+        {
             bullets[i].x += BULLET_SPEED * bullets[i].direction;
 
             // Check bullet off-screen
-            if (bullets[i].x < 0 || bullets[i].x > MAP_WIDTH) {
+            if (bullets[i].x < 0 || bullets[i].x > MAP_WIDTH)
+            {
                 bullets[i].active = 0;
                 continue;
             }
 
             // --- Check collision with enemy ---
-            if (enemy.active) {
+            if (enemy.active)
+            {
                 int bullet_screen_x = bullets[i].x - camera_x;
                 int bullet_screen_y = bullets[i].y;
 
@@ -164,83 +232,106 @@ void updateBullets(int camera_x) {
                 if (bullet_screen_x + BULLET_SIZE > enemy_screen_x &&
                     bullet_screen_x < enemy_screen_x + ENEMY_WIDTH &&
                     bullet_screen_y + BULLET_SIZE > enemy_screen_y &&
-                    bullet_screen_y < enemy_screen_y + ENEMY_HEIGHT) {
+                    bullet_screen_y < enemy_screen_y + ENEMY_HEIGHT)
+                {
 
-                    bullets[i].active = 0;   // bullet stops
-                    enemy.hp--;              // reduce HP
-                    if (enemy.hp <= 1) {
-                        enemy.active = 0;    // enemy disappears if HP 0
+                    bullets[i].active = 0; // bullet stops
+                    enemy.hp--;            // reduce HP
+                    if (enemy.hp <= 1)
+                    {
+                        enemy.active = 0;                     // enemy disappears if HP 0\
+                        // Award score
+                        int points = 100 + ((level - 1) * 50); // stage scaling
+                        current_score += points;
+                        if (current_score > high_score)
+                        {
+                            high_score = current_score;
+                        }
                     }
+
                     continue; // no further bullet movement
                 }
             }
 
             // Deactivate bullets far off-screen
             int screen_x = bullets[i].x - camera_x;
-            if (screen_x < -100 || screen_x > SCREEN_WIDTH + 100) {
+            if (screen_x < -100 || screen_x > SCREEN_WIDTH + 100)
+            {
                 bullets[i].active = 0;
             }
         }
     }
 }
 
-void drawEnemy(int camera_x, int enemy_type) {
-    if (!enemy.active) return;
+void drawEnemy(int camera_x, int enemy_type)
+{
+    if (!enemy.active)
+        return;
 
     int enemy_screen_x = enemy.x - camera_x;
     int enemy_screen_y = enemy.y;
-    
+
     // Calculate clipping bounds
-    int src_start_x = 0;  // source sprite x offset
-    int dst_start_x = enemy_screen_x;  // destination screen x
+    int src_start_x = 0;              // source sprite x offset
+    int dst_start_x = enemy_screen_x; // destination screen x
     int draw_width = ENEMY_WIDTH;
-    
+
     // Clip left side
-    if (enemy_screen_x < 0) {
-        src_start_x = -enemy_screen_x;  // skip pixels from left of sprite
-        dst_start_x = 0;                // start drawing at screen edge
-        draw_width += enemy_screen_x;   // reduce width
+    if (enemy_screen_x < 0)
+    {
+        src_start_x = -enemy_screen_x; // skip pixels from left of sprite
+        dst_start_x = 0;               // start drawing at screen edge
+        draw_width += enemy_screen_x;  // reduce width
     }
-    
+
     // Clip right side
-    if (dst_start_x + draw_width > SCREEN_WIDTH) {
+    if (dst_start_x + draw_width > SCREEN_WIDTH)
+    {
         draw_width = SCREEN_WIDTH - dst_start_x;
     }
-    
+
     // Draw the clipped sprite pixel by pixel
-    if (draw_width > 0 && enemy_screen_y >= 0 && enemy_screen_y < SCREEN_HEIGHT - ENEMY_HEIGHT) {
-        for (int y = 0; y < ENEMY_HEIGHT; y++) {
-            for (int x = 0; x < draw_width; x++) {
+    if (draw_width > 0 && enemy_screen_y >= 0 && enemy_screen_y < SCREEN_HEIGHT - ENEMY_HEIGHT)
+    {
+        for (int y = 0; y < ENEMY_HEIGHT; y++)
+        {
+            for (int x = 0; x < draw_width; x++)
+            {
                 int src_x = src_start_x + x;
                 int src_y = y;
                 int dst_x = dst_start_x + x;
                 int dst_y = enemy_screen_y + y;
-                
-                // Get pixel 
+
+                // Get pixel
                 uint32_t pixel = ENEMY_SPRITES[enemy_type][src_y * ENEMY_WIDTH + src_x];
                 unsigned char r = (pixel >> 24) & 0xFF;
                 unsigned char g = (pixel >> 16) & 0xFF;
                 unsigned char b = (pixel >> 8) & 0xFF;
                 unsigned char a = pixel & 0xFF;
-                
+
                 // Only draw if pixel is not fully transparent
-                if (a > 0) {
+                if (a > 0)
+                {
                     drawPixelRGBA32(dst_x, dst_y, r, g, b, a);
                 }
             }
         }
     }
-    
+
     // Draw HP bar above enemy
-    if (enemy.hp > 1) {
+    if (enemy.hp > 1)
+    {
         int bar_width = draw_width; // use clipped width
         int bar_height = 10;
-        int bar_x = dst_start_x;    // use clipped x position
+        int bar_x = dst_start_x; // use clipped x position
         int bar_y = enemy_screen_y - 20;
-        
-        if (bar_y >= 0 && bar_y < SCREEN_HEIGHT - bar_height) {
-            for (int x = 0; x < bar_width; x++) {
-                for (int y = 0; y < bar_height; y++) {
+
+        if (bar_y >= 0 && bar_y < SCREEN_HEIGHT - bar_height)
+        {
+            for (int x = 0; x < bar_width; x++)
+            {
+                for (int y = 0; y < bar_height; y++)
+                {
                     if (x < (bar_width * enemy.hp) / 10)
                         drawPixelRGBA32(bar_x + x, bar_y + y, 0, 255, 0, 255);
                     else
@@ -248,24 +339,29 @@ void drawEnemy(int camera_x, int enemy_type) {
                 }
             }
         }
-    } 
+    }
 }
-void drawBullets(int camera_x) {
-    for (int i = 0; i < MAX_BULLETS; i++) {
-        if (bullets[i].active) {
+void drawBullets(int camera_x)
+{
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
+        if (bullets[i].active)
+        {
             int screen_x = bullets[i].x - camera_x;
             int screen_y = bullets[i].y;
             if (screen_x >= 0 && screen_x < SCREEN_WIDTH - BULLET_SIZE &&
-                screen_y >= 0 && screen_y < SCREEN_HEIGHT - BULLET_SIZE) {
+                screen_y >= 0 && screen_y < SCREEN_HEIGHT - BULLET_SIZE)
+            {
                 drawImageRGBA32(bullet, BULLET_SIZE, BULLET_SIZE, screen_x, screen_y);
             }
         }
     }
 }
 
-
-int isCollidingWithEnemy(int next_x, int player_y, Enemy *enemy) {
-    if (!enemy->active) return 0; // no collision if enemy is dead
+int isCollidingWithEnemy(int next_x, int player_y, Enemy *enemy)
+{
+    if (!enemy->active)
+        return 0; // no collision if enemy is dead
 
     // Player and enemy are rectangles; check overlap
     int player_left = next_x;
@@ -282,7 +378,8 @@ int isCollidingWithEnemy(int next_x, int player_y, Enemy *enemy) {
              player_bottom < enemy_top || player_top > enemy_bottom);
 }
 
-void drawCountdownOnScreen(int camera_x) {
+void drawCountdownOnScreen(int camera_x)
+{
     unsigned int remaining = get_remaining_time_ms();
     unsigned int seconds = remaining / 1000;
     unsigned int tenths = (remaining % 1000) / 100;
@@ -291,7 +388,7 @@ void drawCountdownOnScreen(int camera_x) {
     char buf[50];
     char *p = buf;
     p = strcopy(p, "Time left: ");
-    
+
     char secStr[10];
     intToStr(seconds, secStr);
     p = strcopy(p, secStr);
@@ -309,35 +406,60 @@ void drawCountdownOnScreen(int camera_x) {
     clearRectWithBackground(10, 10, 250, 20, camera_x);
 
     // Draw the new timer text on top
-    drawString(10, 10, buf, 0xFFFFFFFF, 2);  // white text, scale 2
+    drawString(10, 10, buf, 0xFFFFFFFF, 2); // white text, scale 2
 }
 
-int show_new_level_screen(int level, int timer_value, char message[]) {
+void drawScores(int camera_x)
+{
+    char buf[50];
+
+    // Draw background area to clear old score text
+    clearRectWithBackground(10, 40, 250, 40, camera_x);
+
+    // Current score
+    char curScoreStr[20];
+    intToStr(current_score, curScoreStr);
+    strcopy(buf, "Current Score: ");
+    strcopy(buf + strlen(buf), curScoreStr);
+    drawString(10, 40, buf, 0xFFFFFFFF, 2);
+
+    // High score
+    char highScoreStr[20];
+    intToStr(high_score, highScoreStr);
+    strcopy(buf, "High Score: ");
+    strcopy(buf + strlen(buf), highScoreStr);
+    drawString(10, 70, buf, 0xFFFFFFFF, 2);
+}
+
+int show_new_level_screen(int level, int timer_value, char message[])
+{
     clear_screen();
-    
+
     // Draw level screen
     fillRect(0, 0, width, height, 0xFF2E3440); // Dark background
-    
-    drawString(width/2 - 100, 100, message, 0xFFFFD700, 3);
-    
+
+    drawString(width / 2 - 100, 100, message, 0xFFFFD700, 3);
+
     // Convert level number to string
     char level_text[20] = "Level ";
     char level_num[10];
     intToStr(level, level_num);
     int pos = 6; // length of "Level "
-    for(int i = 0; level_num[i] != '\0'; i++) {
+    for (int i = 0; level_num[i] != '\0'; i++)
+    {
         level_text[pos++] = level_num[i];
     }
     level_text[pos] = '\0';
-    
-    drawString(width/2 - 80, 180, level_text, 0xFFFFFFFF, 2);
-    
+
+    drawString(width / 2 - 80, 180, level_text, 0xFFFFFFFF, 2);
+
     // Convert timer value to string
     char timer_text[30] = "Timer: ";
     char timer_num[10];
     intToStr(timer_value, timer_num);
     pos = 7; // length of "Timer: "
-    for(int i = 0; timer_num[i] != '\0'; i++) {
+    for (int i = 0; timer_num[i] != '\0'; i++)
+    {
         timer_text[pos++] = timer_num[i];
     }
     // Add " ms"
@@ -345,43 +467,50 @@ int show_new_level_screen(int level, int timer_value, char message[]) {
     timer_text[pos++] = 'm';
     timer_text[pos++] = 's';
     timer_text[pos] = '\0';
-    
-    drawString(width/2 - 100, 220, timer_text, 0xFFFFFFFF, 2);
-    
-    if(level > 1){
-         drawString(width/2 - 120, 260, "Enemies are stronger!", 0xFFFF6B6B, 2);
-    drawString(width/2 - 120, 300, "Less time to shoot!", 0xFFFF6B6B, 2);
+
+    drawString(width / 2 - 100, 220, timer_text, 0xFFFFFFFF, 2);
+
+    if (level > 1)
+    {
+        drawString(width / 2 - 120, 260, "Enemies are stronger!", 0xFFFF6B6B, 2);
+        drawString(width / 2 - 120, 300, "Less time to shoot!", 0xFFFF6B6B, 2);
     }
-   
-    drawString(width/2 - 140, 380, "Press any key to start", 0xFF88C999, 2);
-    
+    else {
+        drawString(width / 2 - 130, 300, "A / D key to move", 0xFF88C999, 2);
+        drawString(width / 2 - 130, 320, "SPACEBAR to shoot", 0xFF88C999, 2);
+    }
+
+    drawString(width / 2 - 140, 380, "Press any key to start", 0xFF88C999, 2);
+
     uart_puts("Press any key to continue\r\n");
-    
+
     char c = uart_getc(); // Wait for any key press
-    if (c == 'q') {
+    if (c == 'q')
+    {
         return 0; // User wants to quit
     }
-    
+
     // Simple countdown
     clear_screen();
-    drawString(width/2 - 10, height/2, "3", 0xFFFFFFFF, 4);
+    drawString(width / 2 - 10, height / 2, "3", 0xFFFFFFFF, 4);
     wait_msec(1000);
-    
+
     clear_screen();
-    drawString(width/2 - 10, height/2, "2", 0xFFFFFFFF, 4);
+    drawString(width / 2 - 10, height / 2, "2", 0xFFFFFFFF, 4);
     wait_msec(1000);
-    
+
     clear_screen();
-    drawString(width/2 - 10, height/2, "1", 0xFFFFFFFF, 4);
+    drawString(width / 2 - 10, height / 2, "1", 0xFFFFFFFF, 4);
     wait_msec(1000);
-    
+
     clear_screen();
-    drawString(width/2 - 30, height/2, "GO!", 0xFF88C999, 4);
+    drawString(width / 2 - 30, height / 2, "GO!", 0xFF88C999, 4);
     wait_msec(500);
     return -1; // Continue game
 }
 
-int task3_sidescroller(int timer_value) {
+int task3_sidescroller(int timer_value, int level)
+{
     int camera_x = 0;
     int player_x = 50;
     int player_y = 250;
@@ -389,22 +518,23 @@ int task3_sidescroller(int timer_value) {
     int old_player_y = player_y;
     int jumping = 0;
     int jump_velocity = 0;
-    int next_enemy_spawn_x = 300;  // first spawn after 300px
-    int enemy_type = 0; // default to first enemy sprite
-    int hp_increment = 5; // HP increase per enemy
+    int next_enemy_spawn_x = 300; // first spawn after 300px
+    int enemy_type = 0;           // default to first enemy sprite
+    int hp_increment = 5;         // HP increase per enemy
     int timer_active = 0;
     int restart = 0;
     int lost = 0;
-    
 
-    typedef struct {
+    typedef struct
+    {
         int old_screen_x, old_screen_y;
         int was_active;
     } BulletPosition;
     BulletPosition old_bullet_pos[MAX_BULLETS];
 
     initBullets();
-    for (int i = 0; i < MAX_BULLETS; i++) {
+    for (int i = 0; i < MAX_BULLETS; i++)
+    {
         old_bullet_pos[i].old_screen_x = -1;
         old_bullet_pos[i].old_screen_y = -1;
         old_bullet_pos[i].was_active = 0;
@@ -417,7 +547,7 @@ int task3_sidescroller(int timer_value) {
     enemy.move_timer = 2000;
     // place enemy near the right side of the visible screen (world coords)
     enemy.x = camera_x + SCREEN_WIDTH - ENEMY_WIDTH - 10; // visible on-screen at start
-    enemy.y = player_y - 30; // same baseline as chicken
+    enemy.y = player_y - 30;                              // same baseline as chicken
     int enemyClear = 0;
 
     uart_puts("\r\n--- Game Start ---\r\n");
@@ -429,85 +559,104 @@ int task3_sidescroller(int timer_value) {
     // draw player and enemy
     drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
     set_shooting_timer(timer_value); // 4 seconds to shoot
-    
-    while (1) {
+
+    while (1)
+    {
         char c = uart_read();
-        if (c == 'q') break;
+        if (c == 'q')
+            break;
 
         // drawCountdownOnScreen(camera_x);
-        if (enemy.active) {
+        if (enemy.active)
+        {
             timer_active = 1;
             int enemy_screen_x = enemy.x - camera_x;
-            if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH){
+            if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
+            {
                 drawEnemy(camera_x, enemy_type);
             }
             drawCountdownOnScreen(camera_x);
-        } 
-        if (timer_active) {
-            if (check_shooting_timer_expired() && enemy.active) {
-                timer_active = 0;   // Stop the timer
+            drawScores(camera_x);
+        }
+        if (timer_active)
+        {
+            if (check_shooting_timer_expired() && enemy.active)
+            {
+                timer_active = 0; // Stop the timer
                 uart_puts("Time up! Enemy survived!\r\n");
                 uart_puts("You lose!\r\n");
                 uart_puts("Press 't' to continue and 'q' to quit\r\n");
                 clear_screen();
-                drawImageRGBA32(lose,500,500,0,0);
+                drawImageRGBA32(lose, 500, 500, 0, 0);
                 drawString(100, 50, "Time up! You Lose!", 0xFFFFFFFF, 2);
                 drawString(100, 450, "Press 't' to try again", 0xFFFFFFFF, 2);
                 lost = 1;
                 break;
-            } else{
+            }
+            else
+            {
                 drawCountdownOnScreen(camera_x);
             }
-            
         }
-        
+
         int camera_changed = 0;
         int player_moved = 0;
         int old_camera_x = camera_x;
         old_player_x = player_x;
         old_player_y = player_y;
-        int world_x = player_x + camera_x;  // player position in world coords
+        int world_x = player_x + camera_x; // player position in world coords
 
-       
-
-        if (c == 'd') {
-            if(isCollidingWithEnemy(world_x + 100, player_y, &enemy)) {
+        if (c == 'd')
+        {
+            if (isCollidingWithEnemy(world_x + 100, player_y, &enemy))
+            {
                 uart_puts("Ouch! Collided with enemy!\r\n");
                 continue;
-            } 
-            
-            if (player_x + PLAYER_WIDTH/2 + 200 > SCREEN_WIDTH - 170) {
-                if (camera_x < MAP_WIDTH - SCREEN_WIDTH - 50) {
+            }
+
+            if (player_x + PLAYER_WIDTH / 2 + 200 > SCREEN_WIDTH - 170)
+            {
+                if (camera_x < MAP_WIDTH - SCREEN_WIDTH - 50)
+                {
                     camera_x += 100;
                     player_x -= 50;
                     camera_changed = 1;
                 }
-            } else {
+            }
+            else
+            {
                 player_x += 100;
                 player_moved = 1;
             }
         }
-        else if (c == 'a') {
-            if (player_x > 50) {
+        else if (c == 'a')
+        {
+            if (player_x > 50)
+            {
                 player_x -= 100;
                 player_moved = 1;
-            } else if (camera_x > 0) {
+            }
+            else if (camera_x > 0)
+            {
                 camera_x -= 100;
                 camera_changed = 1;
             }
         }
-        else if (c == 'w' && !jumping) {
+        else if (c == 'w' && !jumping)
+        {
             jumping = 1;
             jump_velocity = -20;
         }
-        else if (c == 's' || c == ' ') {
+        else if (c == 's' || c == ' ')
+        {
             shootBullet(player_x, player_y, camera_x, 1);
-        } 
-        
+        }
+
         // Check if player moved far enough to spawn a new enemy
-        if (!enemy.active && world_x >= next_enemy_spawn_x) {
+        if (!enemy.active && world_x >= next_enemy_spawn_x)
+        {
             uart_puts("\n You have  ");
-            uart_dec(timer_value /1000);
+            uart_dec(timer_value / 1000);
             uart_puts(" seconds to shoot!\r");
             uart_puts("\n New enemy appeared!\r");
             uart_puts("\n HP Level:");
@@ -517,80 +666,97 @@ int task3_sidescroller(int timer_value) {
             enemy.x = world_x + SCREEN_WIDTH - ENEMY_WIDTH; // spawn ahead of player
             enemy.y = player_y - 30;
             enemy_type++;
-            next_enemy_spawn_x = world_x + 300;  // next spawn after another 300px
-            enemyClear = 0;  // reset clear counter for the new enemy
+            next_enemy_spawn_x = world_x + 300; // next spawn after another 300px
+            enemyClear = 0;                     // reset clear counter for the new enemy
             timer_active = 1;
             set_shooting_timer(timer_value); // 4 seconds to shoot
             uart_puts("\r\n");
         }
-        
-
-        
 
         handleJumping(&player_y, &jumping, &jump_velocity);
-        if (player_y != old_player_y) player_moved = 1;
+        if (player_y != old_player_y)
+            player_moved = 1;
 
         // save old bullet screen positions using the old camera (so clearing is correct)
-        for (int i = 0; i < MAX_BULLETS; i++) {
-            if (bullets[i].active) {
+        for (int i = 0; i < MAX_BULLETS; i++)
+        {
+            if (bullets[i].active)
+            {
                 old_bullet_pos[i].old_screen_x = bullets[i].x - old_camera_x;
                 old_bullet_pos[i].old_screen_y = bullets[i].y;
                 old_bullet_pos[i].was_active = 1;
-            } else {
+            }
+            else
+            {
                 old_bullet_pos[i].was_active = 0;
             }
         }
 
-        updateBullets(camera_x);
+        updateBullets(camera_x, level);
 
-        if (camera_changed) {
+        if (camera_changed)
+        {
             // full redraw when camera changes
             draw_map(camera_x);
             drawBullets(camera_x);
             drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
-            if (enemy.active) {
+            if (enemy.active)
+            {
                 int enemy_screen_x = enemy.x - camera_x;
-                if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH){
+                if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
+                {
                     drawEnemy(camera_x, enemy_type);
                     reset_shooting_timer(timer_value); // reset timer on camera move and enemy alive
                 }
             }
-        } else {
+        }
+        else
+        {
             // selective redraw: clear old bullets using OLD camera, then draw new bullets
-            for (int i = 0; i < MAX_BULLETS; i++) {
-                if (old_bullet_pos[i].was_active) {
+            for (int i = 0; i < MAX_BULLETS; i++)
+            {
+                if (old_bullet_pos[i].was_active)
+                {
                     int ox = old_bullet_pos[i].old_screen_x;
                     int oy = old_bullet_pos[i].old_screen_y;
-                    if (ox >= 0 && ox < SCREEN_WIDTH - BULLET_SIZE && oy >= 0 && oy < SCREEN_HEIGHT - BULLET_SIZE) {
+                    if (ox >= 0 && ox < SCREEN_WIDTH - BULLET_SIZE && oy >= 0 && oy < SCREEN_HEIGHT - BULLET_SIZE)
+                    {
                         // use old_camera_x so background restored from correct world slice
                         clearRectWithBackground(ox, oy, BULLET_SIZE, BULLET_SIZE, old_camera_x);
                     }
                 }
-                if (bullets[i].active) {
+                if (bullets[i].active)
+                {
                     int new_screen_x = bullets[i].x - camera_x;
                     int new_screen_y = bullets[i].y;
                     if (new_screen_x >= 0 && new_screen_x < SCREEN_WIDTH - BULLET_SIZE &&
-                        new_screen_y >= 0 && new_screen_y < SCREEN_HEIGHT - BULLET_SIZE) {
+                        new_screen_y >= 0 && new_screen_y < SCREEN_HEIGHT - BULLET_SIZE)
+                    {
                         drawImageRGBA32(bullet, BULLET_SIZE, BULLET_SIZE, new_screen_x, new_screen_y);
                     }
                 }
             }
 
             // clear old player using OLD camera and draw new player
-            if (player_moved) {
+            if (player_moved)
+            {
                 clearRectWithBackground(old_player_x, old_player_y, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, old_camera_x);
                 drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
             }
 
             // draw enemy at current camera
-            if (enemy.active) {
+            if (enemy.active)
+            {
                 int enemy_screen_x = enemy.x - camera_x;
                 if (enemy_screen_x >= -ENEMY_WIDTH && enemy_screen_x < SCREEN_WIDTH)
                     drawEnemy(camera_x, enemy_type);
-            } else {
+            }
+            else
+            {
                 enemyClear++;
             }
-            if (enemyClear == 1) { // make sure the clearing happens only once
+            if (enemyClear == 1)
+            { // make sure the clearing happens only once
                 wait_msec(1000);
                 clearRectWithBackground(enemy.x - old_camera_x, enemy.y - 20, ENEMY_WIDTH, ENEMY_HEIGHT + 20, old_camera_x);
                 drawImageRGBA32(shoot_chicken, SHOOT_CHICKEN_WIDTH, SHOOT_CHICKEN_HEIGHT, player_x, player_y);
@@ -598,10 +764,11 @@ int task3_sidescroller(int timer_value) {
             }
         }
 
-        if(enemy_type > 4){
+        if (enemy_type > 4)
+        {
             // Player wins
             clear_screen();
-            drawImageRGBA32(win,500,500,0,0);
+            drawImageRGBA32(win, 500, 500, 0, 0);
             drawString(100, 50, "Congratz!! You Win!", 0xFFFFFFFF, 2);
             drawString(75, 450, "Press 'h' to go to a new level", 0x00, 1);
             uart_puts("You Win!\r\n");
@@ -611,66 +778,83 @@ int task3_sidescroller(int timer_value) {
 
         wait_msec(1000); // keep your original tick; lower to ~16 for smoother
     }
-    
-    while (1) {
+
+    while (1)
+    {
         char c = uart_read();
-        if (c == 't' && lost) {
+        if (c == 't' && lost)
+        {
             restart = 1;
             break;
-        } else if (c == 'q') {
+        }
+        else if (c == 'q')
+        {
             restart = 0;
             break;
-        } else if (c == 'h' && !lost) {
+        }
+        else if (c == 'h' && !lost)
+        {
             restart = 2; // go to a new level
             clear_screen();
             drawString(100, 50, "Loading next level...", 0xFFFFFFFF, 2);
             break;
         }
     }
-    
+
     return restart;
-    
 }
 
-int game() {
+int game()
+{
     int restart;
     int increment = 1000;
     int base_time = 5000; // start with 5 seconds
     int max_time = 1000;
     int track = show_main_menu();
     int level = 1;
-    
-    if(track == 0){
+
+    if (track == 0)
+    {
         int user_choice = show_new_level_screen(level, base_time, "GUNNY GAME");
-        while (1) {
-            if(user_choice == 0){
+        while (1)
+        {
+            if (user_choice == 0)
+            {
                 // User chose to quit from level screen
                 clear_screen();
                 uart_puts("Exiting game...\r\n");
                 break;
             }
-            restart = task3_sidescroller(base_time);
-            if (restart == 1) {
+            restart = task3_sidescroller(base_time, level);
+            if (restart == 1)
+            {
                 // 't' pressed -> restart same level
+                current_score = 0;
                 continue;
             }
-            else if (restart == 2) {
+            else if (restart == 2)
+            {
                 // 'h' pressed -> next level
                 level++;
-                if (base_time - increment >= max_time) {
+                if (base_time - increment >= max_time)
+                {
                     base_time -= increment; // decrease time for next level
                     uart_puts("Timer minus 1000 ms\r\n");
                     user_choice = show_new_level_screen(level, base_time, "Level up!");
-                } 
+                }
                 continue;
             }
-            else {
+            else
+            {
                 // Store the menu result once
                 int menu_choice = show_main_menu();
-                
-                if (menu_choice == 0){
+
+                if (menu_choice == 0)
+                {
                     continue; // back to main menu (Start Game)
-                } else if(menu_choice == 3){
+                }
+                else if (menu_choice == 3)
+                {
                     clear_screen();
                     uart_puts("Exiting game...\r\n");
                     break;
